@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+svg {
+  font: 10px sans-serif;
+}
+
+.brush .extent {
+  fill-opacity: .3;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}
+
+.axis line,
+.axis path {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+  cursor: move;
+  font-size: 5px;
+}
+
+line{
+  stroke-width: 1;
+  stroke: black;
+}
+
+</style>
+<body>
+<script src="d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 30, right: 10, bottom: 10, left: 10},
+    width = 1920 - margin.left - margin.right,
+    height = 1080 - margin.top - margin.bottom;
+
+var x = d3.scale.ordinal().rangePoints([0, width], 1),
+    y = {};
+
+var nodes = {}, edges = {};
+var length = 0;
+var level = 0;
+
+var line = d3.svg.line();
+var axis = d3.svg.axis().orient("left");
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.csv("data.csv", function(error, lines){
+	length = Object.keys(lines[0]).length;
+	//prepare data.
+	init(length);
+	for (var k in Object.keys(lines[0])){
+		for (var l in lines.slice(1,lines.length)){
+			value = lines[l];
+			hop_list = [];
+			Object.keys(value).forEach(function(key){
+				hop_list.push(value[key]);
+			});
+			parse_trace(hop_list);
+		}
+	}
+	
+	//prepare scale.
+	x.domain(range(0,length));
+	for (var i=0; i < length; i++){
+		node_list = nodes[i];
+		y[i] = d3.scale.ordinal().rangePoints([height,0],1).domain(Object.keys(node_list));
+	}
+	
+	//svg.
+	var g = svg.selectAll(".level")
+		.data(range(0,length))
+		.enter().append("g")
+		.attr("class","level")
+		.attr("transform", function(d){ return "translate(" + x(d) + ")"; });
+	
+	g.append("g")
+	 	.attr("class","axis")
+		.each(function(d) { d3.select(this).call(axis.scale(y[d])); })
+		.append("text")
+		.style("text-anchor", "middle")
+		.attr("y",-9)
+		.text(function(d) {return d;});
+	
+	for (var i=0; i < length - 1; i++){
+		edge_dict = edges[i];
+		edge_list = toList(edge_dict);
+		level = i;
+		svg.append("g")
+		.selectAll("line")
+		.data(edge_list)
+		.enter().append("line")
+		.attr("x1",function(d){ return x(level); })
+		.attr("y1",function(d){ return y[level](d[0].split(',')[0]);})
+		.attr("x2",function(d){ return x(level+1); })
+		.attr("y2",function(d){ return y[level+1](d[0].split(',')[1]);});
+	}
+
+});
+
+function init(max_hop_num){
+	for (var i=0; i < max_hop_num; i++){
+		nodes[i] = {};
+	}
+	for (var i=0; i < max_hop_num - 1; i++){
+		edges[i] = {};
+	}
+}
+
+function parse_trace(hops_list){
+	for (var l=0; l < Object.keys(hops_list).length; l++){
+		if (hops_list[l] == undefined){
+			break;
+		}
+	}
+
+	for (var i=0; i < l-1; i++){
+		ingress = hops_list[i];
+		outgress = hops_list[i+1];
+		
+		if (!(ingress in nodes[i])){
+			nodes[i][ingress] = 0;
+		}
+		if ([ingress, outgress] in edges[i]){
+			edges[i][[ingress,outgress]]++;
+		}
+		else{
+			edges[i][[ingress,outgress]] = 1;
+		}
+	}
+	last = hops_list[l-1];
+	if (! last in nodes[i]){
+		nodes[i][last] = 0;
+	}
+}
+
+function range(start, count) {
+	return Array.apply(0, Array(count)).map(function (element, index) {return index + start;});
+}
+
+function toList(dict) {
+    return Object.keys(dict).map(function (key) {
+        return [key];
+    });
+}
+
+</script>
