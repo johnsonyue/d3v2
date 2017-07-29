@@ -50,6 +50,7 @@ var level = 0;
 var line = d3.svg.line();
 var axis = d3.svg.axis().orient("left");
 var drag = d3.behavior.drag();
+var level_drag = d3.behavior.drag();
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -121,13 +122,32 @@ d3.csv("data.csv", function(error, lines){
 		.attr("y2",function(d){ return y[level+1](d[0].split(',')[1]);});
 	}
 	
+	level_drag.on("dragstart", function() {
+		d3.event.sourceEvent.stopPropagation(); // silence other listeners
+	});
+	level_drag.on("drag", on_level_drag);
+	g.selectAll(".axis text")
+		.call(level_drag);
+	
 	drag.on("dragstart", function() {
 		d3.event.sourceEvent.stopPropagation(); // silence other listeners
 	});
 	drag.on("drag", on_tick_drag);
 	g.selectAll(".tick")
 		.call(drag);
+	g.selectAll(".tick text")
+		.attr("opacity",0)
+		.on("mouseover", handleMouseOver)
+		.on("mouseout", handleMouseOut);
 });
+
+function handleMouseOver(){
+	d3.select(this).attr("opacity",1);
+}
+
+function handleMouseOut(){
+	d3.select(this).attr("opacity",0);
+}
 
 function on_tick_drag(){
 	dy = d3.event.dy;
@@ -149,6 +169,35 @@ function on_tick_drag(){
 		}
 		d3.select("#id"+e_id).attr("y2",t.translate[1]);
 	}
+}
+
+function on_level_drag(){
+	dx = d3.event.dx;
+	lvl = d3.select(this.parentNode).attr("lvl");
+	t = d3.transform(d3.select(this).attr("transform"));
+	t.translate[0] += dx;
+	d3.select(this.parentNode).attr("transform","translate("+t.translate[0]+","+t.translate[1]+")");
+	console.log(dx);
+	console.log(t.translate);
+	/*
+	level_nodes = nodes[parseInt(lvl)];
+	level_node_list = toList(level_nodes);
+	for (var i=0; i<level_node_list.length; i++){
+		n = level_node_list[i];
+		related_edges = node_edges[parseInt(lvl)][n];
+		for (var i=0; i < related_edges.length; i++){
+			e = related_edges[i];
+			e_list = e.split(',');
+			id_list = id.split(',');
+			e_id = e.replace(',','c').replace(/\./g,'d');
+			if (id_list[0] == e_list[0]){
+				d3.select("#id"+e_id).attr("x1",t.translate[0]);
+				continue;
+			}
+			d3.select("#id"+e_id).attr("x2",t.translate[0]);
+		}
+	}
+	*/
 }
 
 function init(max_hop_num){
