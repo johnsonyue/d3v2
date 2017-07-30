@@ -22,12 +22,24 @@ svg {
 .axis text {
   text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
   cursor: move;
-  font-size: 5px;
+  font-size: 15px;
 }
 
 line{
-  stroke-width: 1;
-  stroke: black;
+  stroke-width: 4;
+}
+
+div.tooltip {	
+    position: absolute;			
+    text-align: center;			
+    width: 60px;					
+    height: 28px;					
+    padding: 2px;				
+    font: 12px sans-serif;		
+    background: lightsteelblue;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
 }
 
 </style>
@@ -37,8 +49,8 @@ line{
 <script>
 
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
-    width = 1920 - margin.left - margin.right,
-    height = 1080 - margin.top - margin.bottom;
+    width = 1920*3 - margin.left - margin.right,
+    height = 1080*3 - margin.top - margin.bottom;
 
 var x = d3.scale.ordinal().rangePoints([0, width], 1),
     y = {};
@@ -53,6 +65,14 @@ var axis = d3.svg.axis().orient("left");
 var drag = d3.behavior.drag();
 var level_drag = d3.behavior.drag();
 
+var color = d3.scale.linear()
+      .interpolate(d3.interpolateHcl)
+      .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
+
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")				
+    .style("opacity", 0);
+
 var svg = d3.select("body #svg").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -63,15 +83,13 @@ d3.csv("data.csv", function(error, lines){
 	length = Object.keys(lines[0]).length;
 	//prepare data.
 	init(length);
-	for (var k in Object.keys(lines[0])){
-		for (var l in lines.slice(1,lines.length)){
-			value = lines[l];
-			hop_list = [];
-			Object.keys(value).forEach(function(key){
-				hop_list.push(value[key]);
-			});
-			parse_trace(hop_list);
-		}
+	for (var l in lines){
+		value = lines[l];
+		hop_list = [];
+		Object.keys(value).forEach(function(key){
+			hop_list.push(value[key]);
+		});
+		parse_trace(hop_list);
 	}
 	
 	//prepare scale.
@@ -80,6 +98,24 @@ d3.csv("data.csv", function(error, lines){
 		node_list = nodes[i];
 		y[i] = d3.scale.ordinal().rangePoints([height,0],1).domain(Object.keys(node_list));
 	}
+
+	mins=[],maxs=[];
+	Object.keys(edges).forEach(function(key) {
+		minimum = 100000;
+		maximum = 0;
+		Object.keys(edges[key]).forEach(function(k){
+			if (edges[key][k] < minimum){
+				minimum = edges[key][k];
+			}
+			if (edges[key][k] > maximum){
+				maximum = edges[key][k];
+			}
+		});
+		mins.push(minimum);
+		maxs.push(maximum);
+	});
+	
+	color.domain([d3.min(mins),d3.max(maxs)]);
 	
 	//svg.
 	var g = svg.selectAll(".level")
@@ -108,10 +144,10 @@ d3.csv("data.csv", function(error, lines){
 			ingress = d[0].split(',')[0];
 			outgress = d[0].split(',')[1];
 			if (!(d[0] in node_edges[level][ingress])){
-				node_edges[level][ingress].push(d[0]);
+				node_edges[level][ingress].push("r_"+d[0]);
 			}
 			if (!(d[0] in node_edges[level+1][outgress])){
-				node_edges[level+1][outgress].push(d[0]);
+				node_edges[level+1][outgress].push("l_"+d[0]);
 			}
 			id = d[0].replace(/\./g,'d').replace(',','c');
 			return "id"+id;
@@ -120,7 +156,18 @@ d3.csv("data.csv", function(error, lines){
 		.attr("x1",function(d){ return x(level); })
 		.attr("y1",function(d){ return y[level](d[0].split(',')[0]);})
 		.attr("x2",function(d){ return x(level+1); })
-		.attr("y2",function(d){ return y[level+1](d[0].split(',')[1]);});
+		.attr("y2",function(d){ return y[level+1](d[0].split(',')[1]);})
+		.attr("stroke",function(d){ return color(edge_dict[d]); })
+		.on("mouseover",function(){
+			e = d3.select(this).attr("id");
+			e_id = e.substring(2,e.length).replace('c',',').replace(/d/g,'.');
+			lvl = d3.select(this).attr("lvl");
+			div.style("opacity",1);
+			div.html(edges[parseInt(lvl)][e_id])
+			   .style("left", (d3.event.pageX) + "px")		
+			   .style("top", (d3.event.pageY - 28) + "px");
+		})
+		.on("mouseout",function(){div.transition().duration(1000).style("opacity",0);});
 	}
 	
 	level_drag.on("dragstart", function() {
@@ -161,14 +208,14 @@ function on_tick_drag(){
 	related_edges = node_edges[parseInt(lvl)][id];
 	for (var i=0; i < related_edges.length; i++){
 		e = related_edges[i];
-		e_list = e.split(',');
-		id_list = id.split(',');
-		e_id = e.replace(',','c').replace(/\./g,'d');
-		if (id_list[0] == e_list[0]){
+		e_list = e.split('_')[1].split(',');
+		e_id = e.substring(2,e.length).replace(',','c').replace(/\./g,'d');
+		if ((include(e_list,id)) && e.split('_')[0]=="r"){
 			d3.select("#id"+e_id).attr("y1",t.translate[1]);
-			continue;
 		}
-		d3.select("#id"+e_id).attr("y2",t.translate[1]);
+		else if(include(e_list,id)){
+			d3.select("#id"+e_id).attr("y2",t.translate[1]);
+		}
 	}
 }
 
@@ -183,17 +230,19 @@ function on_level_drag(){
 	level_node_list = toList(level_nodes);
 	for (var i=0; i<level_node_list.length; i++){
 		n = level_node_list[i][0];
+		n_list = n.split('_');
 		related_edges = node_edges[parseInt(lvl)][n];
 		for (var j=0; j < related_edges.length; j++){
 			e = related_edges[j];
-			e_list = e.split(',');
-			id_list = n.split(',');
-			e_id = e.replace(',','c').replace(/\./g,'d');
-			if (id_list[0] == e_list[0]){
+			e_list = e.split('_')[1].split(',');
+			e_id = e.substring(2,e.length).replace(',','c').replace(/\./g,'d');
+			if ((include(e_list,n)) && e.split('_')[0]=="r"){
 				d3.select("#id"+e_id).attr("x1",t.translate[0]);
 				continue;
 			}
-			d3.select("#id"+e_id).attr("x2",t.translate[0]);
+			else if(include(e_list,n)){
+				d3.select("#id"+e_id).attr("x2",t.translate[0]);
+			}
 		}
 	}
 }
@@ -246,6 +295,12 @@ function toList(dict) {
     return Object.keys(dict).map(function (key) {
         return [key];
     });
+}
+
+function include(arr, obj) {
+    for(var i=0; i<arr.length; i++) {
+        if (arr[i] == obj) return true;
+    }
 }
 
 </script>
