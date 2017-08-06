@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <title>IP topo query</title>
+
+    <link href="../bootstrap-3.3.7-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../bootstrap-3.3.7-dist/css/dashboard.css" rel="stylesheet">
+    <link href="../bootstrap-3.3.7-dist/css/flag-icon-css/css/flag-icon.css" rel="stylesheet">
+
+    <link href="query.css" rel="stylesheet">
+</head>
+
+<body>
+<script src="../bootstrap-3.3.7-dist/js/d3.min.js"></script>
+<script src="../bootstrap-3.3.7-dist/js/jquery.min.js"></script>
+<script src="../bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">HIT NISL</a>
+        </div>
+
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#">Login</a></li>
+                <li><a href="#">Register</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+            <ul class="nav nav-sidebar">
+                <li><a>overview</a></li>
+            </ul>
+            <ul class="nav nav-sidebar">
+                <li><a>topology</a></li>
+                <li><a>statistics</a></li>
+                <li><a>map</a></li>
+                <li><a>ip-specific</a></li>
+            </ul>
+            <ul class="nav nav-sidebar">
+                <li class="active"><a>border</a></li>
+                <li><a>backbone</a></li>
+                <li><a>router</a></li>
+            </ul>
+        </div>
+        <div class="col-md-10 col-md-offset-2 main">
+            <div class="col-md-10"><h1 class="page-header">Query</h1><label id="source_label">Select data source and date.</label></div>
+            <div class="col-md-10">
+                <div class="form-inline form-group">
+                    <select class="form-control">
+                        <option>CAIDA</option>
+                        <option>iPlane</option>
+                        <option>looking glass</option>
+                        <option>HITNISL</option>
+                    </select>
+
+                    <input type="text" class="form-control" placeholder="time" id="date_text">
+                    <button type="submit" class="form-control" id="query_btn">set</button>
+                </div>
+            </div>
+
+            <div class="col-md-10">
+                <h2 class="sub-header">table</h2>
+                <label>fill in filtering condition, hit filter to trigger query.</label>
+            </div>
+            <div class="col-md-10">
+                <div class="form-inline form-group">
+                    <input type="text" class="form-control" placeholder="IP address">
+                    <input type="text" class="form-control" placeholder="country">
+                    <input type="text" class="form-control" placeholder="ASN">
+                    <button type="submit" class="form-control" id="query_btn" disabled>filter</button>
+
+                    <button type="submit" class="form-control pull-right" id="go_btn" disabled>go</button>
+                    <input type="text" class="form-control pull-right" placeholder="page" id="go_text">
+                </div>
+            </div>
+
+            <div class="col-md-10 topo">
+                <table class="table table-bordered table-hover col-md-10" id="border_table">
+                    <thead>
+                    <th>#</th>
+                    <th>icon</th>
+                    <th><a style=cursor:pointer>IP<span class="glyphicon glyphicon-menu-down"></span></a></th>
+                    <th><a style=cursor:pointer>ASN<span class="glyphicon glyphicon-menu-down"></span></a></th>
+                    <th>country (MMDB)</th>
+                    <th>neighbours</th>
+                    <th>monitors</th>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>0</td>
+                        <td><span class="flag-icon flag-icon-cn"></span></td>
+                        <td>202.118.236.229</td>
+                        <td>4538</td>
+                        <td>CN</td>
+                        <td><a style=cursor:pointer>details</a></td>
+                        <td><a style=cursor:pointer>details</a></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <nav class="col-md-10">
+                <ul class="pagination" id="pages">
+                    <li id="prev">
+                        <a aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="active"><a>1</a></li>
+                    <li id="next">
+                        <a aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="col-md-10">
+                <h2 class="sub-header">map</h2>
+                <label>fill in ip to filter results, click on header items to sort</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="neighbour_modal" tabindex="-1" role="dialog" aria-labelledby="neighbour_modal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="neighbour_modal">Neighbours List</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-hover col-md-10" id="neighbour_table">
+                    <thead>
+                    <th>#</th>
+                    <th>Icon</th>
+                    <th>IP</th>
+                    <th>MMDB</th>
+                    <th>ASN</th>
+                    <th>BGP</th>
+                    <th>纯真数据库</th>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>0</td>
+                        <td><span class="flag-icon flag-icon-cn"></span></td>
+                        <td>202.118.236.229</td>
+                        <td>CN</td>
+                        <td>4538</td>
+                        <td>CN</td>
+                        <td>黑龙江省哈尔滨市哈尔滨工业大学</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="monitor_modal" tabindex="-1" role="dialog" aria-labelledby="monitor_modal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="monitor_modal">Monitor List</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-hover col-md-10" id="monitor_table">
+                    <thead>
+                    <th>#</th>
+                    <th>icon</th>
+                    <th>Name</th>
+                    <th>Activation Date</th>
+                    <th>City</th>
+                    <th>ASN</th>
+                    <th>Organization</th>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>0</td>
+                        <td>haerbin-cn</td>
+                        <td>2016-09-06</td>
+                        <td>Haerbin, China</td>
+                        <td>4538</td>
+                        <td>黑龙江省哈尔滨市哈尔滨工业大学</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="query.js"></script>
+</body>
+</html>

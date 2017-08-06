@@ -1,34 +1,28 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-
 svg {
   font: 10px sans-serif;
 }
-
 .brush .extent {
   fill-opacity: .3;
   stroke: #fff;
   shape-rendering: crispEdges;
 }
-
 .axis line,
 .axis path {
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
 }
-
 .axis text {
   text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
   cursor: move;
   font-size: 15px;
 }
-
 line{
   stroke-width: 4;
 }
-
 div.tooltip {	
     position: absolute;			
     text-align: center;			
@@ -41,34 +35,27 @@ div.tooltip {
     border-radius: 8px;			
     pointer-events: none;			
 }
-
 </style>
 <body>
 <div id="svg"></div>
 <script src="d3.v3.min.js"></script>
 <script>
-
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
     width = 1920*3 - margin.left - margin.right,
     height = 1080*3 - margin.top - margin.bottom;
-
 var x = d3.scale.ordinal().rangePoints([0, width], 1),
     y = {};
-
 var nodes = {}, edges = {};
 var node_edges = {}, node_tick = {};
 var length = 0;
 var level = 0;
-
 var line = d3.svg.line();
 var axis = d3.svg.axis().orient("left");
 var drag = d3.behavior.drag();
 var level_drag = d3.behavior.drag();
-
 var color = d3.scale.linear()
       .interpolate(d3.interpolateHcl)
       .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
-
 var div = d3.select("body").append("div")	
     .attr("class", "tooltip")				
     .style("opacity", 0);
@@ -78,8 +65,7 @@ var svg = d3.select("body #svg").append("svg")
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-d3.csv("data.csv", function(error, lines){
+d3.csv("simple.csv", function(error, lines){
 	length = Object.keys(lines[0]).length;
 	//prepare data.
 	init(length);
@@ -98,7 +84,6 @@ d3.csv("data.csv", function(error, lines){
 		node_list = nodes[i];
 		y[i] = d3.scale.ordinal().rangePoints([height,0],1).domain(Object.keys(node_list));
 	}
-
 	mins=[],maxs=[];
 	Object.keys(edges).forEach(function(key) {
 		minimum = 100000;
@@ -128,6 +113,7 @@ d3.csv("data.csv", function(error, lines){
 	 	.attr("class","axis")
 		.each(function(d) { d3.select(this).attr("lvl",d); d3.select(this).call(axis.scale(y[d])); })
 		.append("text")
+		.attr("class","label")
 		.style("text-anchor", "middle")
 		.attr("y",-9)
 		.text(function(d) {return d;});
@@ -187,12 +173,13 @@ d3.csv("data.csv", function(error, lines){
 		.attr("opacity",0)
 		.on("mouseover", handleMouseOver)
 		.on("mouseout", handleMouseOut);
+	
+	force_nodes=[];
+	force_links=[];
 });
-
 function handleMouseOver(){
 	d3.select(this).attr("opacity",1);
 }
-
 function handleMouseOut(){
 	d3.select(this).attr("opacity",0);
 }
@@ -238,11 +225,29 @@ function on_level_drag(){
 			e_id = e.substring(2,e.length).replace(',','c').replace(/\./g,'d');
 			if ((include(e_list,n)) && e.split('_')[0]=="r"){
 				d3.select("#id"+e_id).attr("x1",t.translate[0]);
-				continue;
 			}
 			else if(include(e_list,n)){
 				d3.select("#id"+e_id).attr("x2",t.translate[0]);
 			}
+		}
+	}
+}
+
+
+function on_level_dbclick(){
+	lvl = d3.select(this).attr("lvl");
+	level_nodes = nodes[parseInt(lvl)];
+	level_node_list = toList(level_nodes);
+	for (var i=0; i<level_node_list.length; i++){
+		n = level_node_list[i][0];
+		n_list = n.split('_');
+		related_edges = node_edges[parseInt(lvl)][n];
+		for (var j=0; j < related_edges.length; j++){
+			e = related_edges[j];
+			e_list = e.split('_')[1].split(',');
+			e_id = e.substring(2,e.length).replace(',','c').replace(/\./g,'d');
+			op = d3.select("#id"+e_id).attr("opacity");
+			d3.select("#id"+e_id).attr("opacity", op==0 ? 1 : 0);
 		}
 	}
 }
@@ -257,14 +262,12 @@ function init(max_hop_num){
 		edges[i] = {};
 	}
 }
-
 function parse_trace(hops_list){
 	for (var l=0; l < Object.keys(hops_list).length; l++){
 		if (hops_list[l] == undefined){
 			break;
 		}
 	}
-
 	for (var i=0; i < l-1; i++){
 		ingress = hops_list[i];
 		outgress = hops_list[i+1];
@@ -286,21 +289,17 @@ function parse_trace(hops_list){
 		node_edges[i][last] = [];
 	}
 }
-
 function range(start, count) {
 	return Array.apply(0, Array(count)).map(function (element, index) {return index + start;});
 }
-
 function toList(dict) {
     return Object.keys(dict).map(function (key) {
         return [key];
     });
 }
-
 function include(arr, obj) {
     for(var i=0; i<arr.length; i++) {
         if (arr[i] == obj) return true;
     }
 }
-
 </script>

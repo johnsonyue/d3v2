@@ -67,9 +67,12 @@ d3.csv("cars.csv", function(error, cars) {
         .domain(d3.extent(cars, function(p) { return +p[d]; }))
         .range([height, 0]));
   }));
+
+	console.log(y);
   
   //debug
   console.log(dimensions);
+  console.log(cars);
 
   // Add grey background lines for context.
   background = svg.append("g")
