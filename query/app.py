@@ -38,7 +38,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			
 	def do_POST(self):
 		action = self.path.replace('/','')
-		valid_action = ["neighbour", "filter", "count"]
+		valid_action = ["neighbour", "filter", "count", "topo"]
 		if ( action not in valid_action ):
 			self.wfile.write("Invalid Action: %s" % action)
 			return
@@ -91,3 +91,11 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(result)
+		elif ( action == "topo" ):
+			if post.has_key("ip"):
+				ip = post["ip"].value
+				helper = db.db_helper()
+				result = helper.query_ip_topo(ip)
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write(result)

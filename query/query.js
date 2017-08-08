@@ -19,7 +19,6 @@ var query_btn = d3.select("#query_btn")
     .on("click",set_source_date);
 var source, date;
 var num_node = -1;
-init_num_node();
 
 function init_num_node(){
 	var url = base_url + "count";
@@ -99,7 +98,7 @@ function query_page(){
 	var country_text = d3.select("#country_text").node().value;
 	var asn_text = d3.select("#asn_text").node().value;
 	
-	params = {
+	var params = {
 		"skip":skip,
 		"limit":limit
 	}
@@ -165,6 +164,8 @@ function refresh_table(){
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td><a style=cursor:pointer onclick=neighbours_click(' + i.toString() + ')>' + "detail" + '</a></td>');
 		row.find("tr:eq(" + i.toString() + ")")
+		   .append('<td><a style=cursor:pointer onclick=topology_click(' + i.toString() + ')>' + "detail" + '</a></td>');
+		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td><a style=cursor:pointer onclick=monitors_click(' + i.toString() + ')>' + "detail" + '</a></td>');
 	}
 }
@@ -175,12 +176,10 @@ listener for neighbour, monitor cell.
 function neighbours_click(i){
 	var url = base_url + "neighbour";
 	var ip = ip_list[parseInt(i)].ip;
-	console.log(ip);
-	params = {
+	var params = {
 		"ip":ip,
 	}
 	var post_str = $.param(params);
-	console.log(post_str);
 
 	neighboursRequest = new XMLHttpRequest();
 	neighboursRequest.open("POST", url, true);
@@ -193,7 +192,6 @@ function on_neighbours_ready(){
 	if(neighboursRequest.readyState == 4 && neighboursRequest.status == 200) {
 		var text = neighboursRequest.responseText;
 		nbr_list = JSON.parse(text);
-		console.log(nbr_list);
 		
 		var tbl = $("#neighbour_table");
 		tbl.find("tbody tr").remove();
@@ -292,21 +290,98 @@ function go_click(){
 /*
 topology svg
 */
-function draw_topo(){
+function topology_click(i){
+	get_topo(ip_list[i].ip);
+}
+
+function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
+	var text = topoRequest.responseText;
+	var edge_list = JSON.parse(text);
+	
+	var uniq_nodes = {};
+	var links = [];
+	var num_uniq_nodes = 0;
+	for( var i=0; i < edge_list.length; i++ ){
+		var source = edge_list[i].source;
+		var target = edge_list[i].target;
+		if ( !(source in uniq_nodes) ){
+			uniq_nodes[source] = num_uniq_nodes;
+			num_uniq_nodes++;
+		}
+		if ( !(target in uniq_nodes) ){
+			uniq_nodes[target] = num_uniq_nodes;
+			num_uniq_nodes++;
+		}
+		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target]});
+	}
+	
+	var nodes = [];
+	for( var key in uniq_nodes ){
+		nodes.push({"index":uniq_nodes[key], "id":key});
+	}
+		
 	var width = 960, height = 600;
-	var topo_svg = d3.select("topo_svg")
+	var topo_svg = d3.select("#topo_svg")
 		.attr("width",width)
 		.attr("height",height);
 	
-	var color = d3.scaleOrdinal(d3.schemeCategory20);
+	var force = d3.layout.force()
+		.nodes(nodes)
+		.links(links)
+		.size([width, height])
+		.linkDistance([50])
+		.charge([-100])
+		.start();
 
-	var simulation = d3.forceSimulation()
-		.force("link", d3.forceLink().id(function(d) { return d.id; }))
-		.force("charge", d3.forceManyBody())
-		.force("center", d3.forceCenter(width / 2, height / 2));
-	var link = svg.append("g")
-		.attr("class", "links")
-		.selectAll("line")
-		.data(graph.links)
+	topo_svg.selectAll("line")
+            .remove();
+	var link = topo_svg.selectAll("line")
+		.data(links)
 		.enter().append("line")
+		.style("stroke", "#ccc")
+		.style("stroke-width", 2);
+
+	topo_svg.selectAll("circle")
+            .remove();
+	var node = topo_svg.selectAll("circle")
+		.data(nodes)
+		.enter().append("circle")
+		.attr("r", 5)
+		.attr("fill", function(d){
+			if (d.id == ip_queried){
+				return "red";
+			}
+			return "blue";
+		})
+		.call(force.drag);
+	
+	force.on("tick", function() {
+		link.attr("x1", function(d) { return d.source.x; })
+		.attr("y1", function(d) { return d.source.y; })
+		.attr("x2", function(d) { return d.target.x; })
+		.attr("y2", function(d) { return d.target.y; });
+
+		node.attr("cx", function(d) { return d.x; })
+		.attr("cy", function(d) { return d.y; });
+	});
+
+	d3.select("#loader-1").style("display","none");
+}}
+
+var ip_queried;
+function get_topo(ip){
+	ip_queried = ip;
+	var url = base_url + "topo";
+	var params = {
+		"ip":ip
+	}
+	var post_str = $.param(params);
+
+	topoRequest = new XMLHttpRequest();
+	topoRequest.open("POST", url, true);
+	topoRequest.onreadystatechange = draw_topo;
+	topoRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+	topoRequest.send(post_str);
+	
+	d3.select("#loader-1").style("display","block");
 }

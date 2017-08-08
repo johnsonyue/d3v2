@@ -89,24 +89,26 @@ class db_helper():
 			return None
 
 		session = self.driver.session()
-		sys.stderr.write("MATCH p=()-[edge:edge*1..3]->() WHERE in.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),},e)\n" % (ip,ip))
+		sys.stderr.write("MATCH p=(in)-[edge:edge*1..3]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type})\n" % (ip,ip))
 		try:
-			result = session.run("MATCH p=()-[edge:edge*1..3]->() WHERE in.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),},e)\n" % (ip,ip))
+			result = session.run("MATCH p=(in)-[edge:edge*1..3]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type}) AS edge\n" % (ip,ip))
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
                         exit(-1)
 		session.close()
-		
+	
 		result_list = []
 		for record in result:
-			record_dict = {}
-			record_dict["in"] = record["in"].properties
-			record_dict["out"] = record["out"].properties
-			record_dict["edge"] = record["edge"].properties
-			result_list.append(record_dict)
-
-		
+			for e in record["edge"]:
+				edge_dict = {}
+				edge_dict["source"] = e["source"]["ip"]
+				edge_dict["target"] = e["target"]["ip"]
+				edge_dict["delay"] = e["delay"]
+				edge_dict["type"] = e["type"]
+				result_list.append(edge_dict)
+	
+		return json.dumps(result_list)
 	
 	def query_node_count(self):
 		session = self.driver.session()
