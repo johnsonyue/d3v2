@@ -38,7 +38,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			
 	def do_POST(self):
 		action = self.path.replace('/','')
-		valid_action = ["neighbour", "asn", "country"]
+		valid_action = ["neighbour", "filter", "count"]
 		if ( action not in valid_action ):
 			self.wfile.write("Invalid Action: %s" % action)
 			return
@@ -65,17 +65,29 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			if post.has_key("ip"):
 				ip = post["ip"].value
 				helper = db.db_helper()
-				result = helper.query_ip_neighbours(ip, skip, limit)
+				result = helper.query_ip_neighbours(ip)
+				self.send_response(200)
+				self.end_headers()
 				self.wfile.write(result)
-		elif ( action == "asn" ):
+		elif ( action == "filter" ):
+			ip = ""
+			asn = ""
+			country = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
 			if post.has_key("asn"):
 				asn = post["asn"].value
-				helper = db.db_helper()
-				result = helper.query_asn_ips(asn, skip, limit)
-				self.wfile.write(result)
-		elif ( action == "country" ):
 			if post.has_key("country"):
 				country = post["country"].value
-				helper = db.db_helper()
-				result = helper.query_geo_ips(country, skip, limit)
-				self.wfile.write(result)
+		
+			helper = db.db_helper()
+			result = helper.query_filtered_ips(ip, asn, country, skip, limit)
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)
+		elif ( action == "count" ):
+			helper = db.db_helper()
+			result = helper.query_node_count()
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)

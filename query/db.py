@@ -24,26 +24,30 @@ class db_helper():
 		password = config["db"]["password"]
 		self.driver = GraphDatabase.driver("bolt://%s:%s"%(address,port), auth=basic_auth(username, password))
 	
-	def query_asn_ips(self, asn, skip, limit):
+	def query_filtered_ips(self, ip, asn, country, skip, limit):
 		session = self.driver.session()
-		try:
-			result = session.run("MATCH (n) WHERE n.asn = {asn} RETURN n SKIP {skip} LIMIT {limit}", {"asn":asn, "skip":skip, "limit":limit})
-		except Exception, ex:
-                        sys.stderr.write("\n" + str(ex) + "\n")
-                        session.close()
-                        exit(-1)
-		session.close()
-		
-		result_list = []
-		for record in result:
-			result_list.append(record["n"].properties)
-	
-		return json.dumps(result_list)
+		if ip != "":
+			ip = "n.ip = \'" + str(ip) + "\'"
+		if asn != "":
+			asn = "n.asn = \'" + str(asn) + "\'"
+		if country != "":
+			country = "n.country = \'" + str(country) + "\'"
 
-	def query_geo_ips(self, country, skip, limit):
-		session = self.driver.session()
+		filter_str = ""
+		for s in [ip,asn,country]:
+			if s != "":
+				filter_str += s + " AND "
+		filter_str = filter_str.strip(" AND ")
+		
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+		else:
+			sys.stderr.write( "MATCH (n) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
 		try:
-			result = session.run("MATCH (n) WHERE n.country = {country} RETURN n SKIP {skip} LIMIT {limit}", {"country":country, "skip":skip, "limit":limit})
+			if filter_str != "":
+				result = session.run( "MATCH (n) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+			else:
+				result = session.run( "MATCH (n) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
@@ -55,14 +59,15 @@ class db_helper():
 			result_list.append(record["n"].properties)
 	
 		return json.dumps(result_list)
-	
-	def query_ip_neighbours(self, ip, skip, limit):
+		
+	def query_ip_neighbours(self, ip):
 		if not is_ip_ligit(ip):
 			return None
 
 		session = self.driver.session()
+		sys.stderr.write("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
 		try:
-			result = session.run("MATCH (in)-[edge:edge*1..3]->(out) WHERE in.ip = {ip} RETURN in,out,edge SKIP {skip} LIMIT {limit}", {"ip":ip, "skip":skip, "limit":limit})
+			result = session.run("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
@@ -74,14 +79,46 @@ class db_helper():
 			record_dict = {}
 			record_dict["in"] = record["in"].properties
 			record_dict["out"] = record["out"].properties
-			record_dict["edge"] = []
-			map( lambda x:record_dict["edge"].append(x.properties) , record["edge"] )
+			record_dict["edge"] = record["edge"].properties
 			result_list.append(record_dict)
 
 		return json.dumps(result_list)
+	
+	def query_ip_topo(self, ip):
+		if not is_ip_ligit(ip):
+			return None
 
-#helper = db_helper(config)
-#result = helper.query_ip_neighbours("1.208.19.42",0,100)
-#result = helper.query_geo_ips("KR",0,100)
-#result = helper.query_asn_ips("3786",0,100)
-#print result
+		session = self.driver.session()
+		sys.stderr.write("MATCH p=()-[edge:edge*1..3]->() WHERE in.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),},e)\n" % (ip,ip))
+		try:
+			result = session.run("MATCH p=()-[edge:edge*1..3]->() WHERE in.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),},e)\n" % (ip,ip))
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		result_list = []
+		for record in result:
+			record_dict = {}
+			record_dict["in"] = record["in"].properties
+			record_dict["out"] = record["out"].properties
+			record_dict["edge"] = record["edge"].properties
+			result_list.append(record_dict)
+
+		
+	
+	def query_node_count(self):
+		session = self.driver.session()
+		try:
+			result = session.run("MATCH (n) return count(n) as count")
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		count = 0
+		for record in result:
+			count = record["count"]
+		return count

@@ -60,14 +60,14 @@
             <div class="col-md-10"><h1 class="page-header">Query</h1><label id="source_label">Select data source and date.</label></div>
             <div class="col-md-10">
                 <div class="form-inline form-group">
-                    <select class="form-control">
+                    <select id="source_select" class="form-control">
                         <option>CAIDA</option>
                         <option>iPlane</option>
                         <option>looking glass</option>
                         <option>HITNISL</option>
                     </select>
 
-                    <input type="text" class="form-control" placeholder="time" id="date_text">
+                    <input id="date_text" type="text" class="form-control" placeholder="time" id="date_text">
                     <button type="submit" class="form-control" id="query_btn">set</button>
                 </div>
             </div>
@@ -78,10 +78,10 @@
             </div>
             <div class="col-md-10">
                 <div class="form-inline form-group">
-                    <input type="text" class="form-control" placeholder="IP address">
-                    <input type="text" class="form-control" placeholder="country">
-                    <input type="text" class="form-control" placeholder="ASN">
-                    <button type="submit" class="form-control" id="query_btn" disabled>filter</button>
+                    <input id="ip_text" type="text" class="form-control" placeholder="IP address">
+                    <input id="country_text" type="text" class="form-control" placeholder="country">
+                    <input id="asn_text" type="text" class="form-control" placeholder="ASN">
+                    <button type="submit" class="form-control" id="filter_btn" disabled>filter</button>
 
                     <button type="submit" class="form-control pull-right" id="go_btn" disabled>go</button>
                     <input type="text" class="form-control pull-right" placeholder="page" id="go_text">
@@ -89,7 +89,7 @@
             </div>
 
             <div class="col-md-10 topo">
-                <table class="table table-bordered table-hover col-md-10" id="border_table">
+                <table class="table table-bordered table-hover col-md-10" id="filter_table">
                     <thead>
                     <th>#</th>
                     <th>icon</th>
@@ -130,7 +130,8 @@
 
             <div class="col-md-10">
                 <h2 class="sub-header">map</h2>
-                <label>fill in ip to filter results, click on header items to sort</label>
+                <label>topology svg</label>
+		<svg id="topo_svg"></svg>
             </div>
         </div>
     </div>
@@ -144,25 +145,22 @@
                 <h4 class="modal-title" id="neighbour_modal">Neighbours List</h4>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-hover col-md-10" id="neighbour_table">
+                <table class="table table-bordered" id="neighbour_table">
                     <thead>
                     <th>#</th>
-                    <th>Icon</th>
-                    <th>IP</th>
-                    <th>MMDB</th>
-                    <th>ASN</th>
-                    <th>BGP</th>
-                    <th>纯真数据库</th>
+                    <th>ingress</th>
+                    <th>outgress</th>
+                    <th>delay</th>
+                    <th>type</th>
                     </thead>
                     <tbody>
                     <tr>
                         <td>0</td>
                         <td><span class="flag-icon flag-icon-cn"></span></td>
                         <td>202.118.236.229</td>
-                        <td>CN</td>
-                        <td>4538</td>
-                        <td>CN</td>
-                        <td>黑龙江省哈尔滨市哈尔滨工业大学</td>
+                        <td>202.118.236.254</td>
+                        <td>0.1</td>
+                        <td>D</td>
                     </tr>
                     </tbody>
                 </table>
@@ -183,7 +181,7 @@
                 <h4 class="modal-title" id="monitor_modal">Monitor List</h4>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-hover col-md-10" id="monitor_table">
+                <table class="table table-bordered" id="monitor_table">
                     <thead>
                     <th>#</th>
                     <th>icon</th>
@@ -211,7 +209,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 <script src="query.js"></script>
