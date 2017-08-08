@@ -110,10 +110,30 @@ class db_helper():
 	
 		return json.dumps(result_list)
 	
-	def query_node_count(self):
+	def query_node_count(self, ip, asn, country):
+		if ip != "":
+			ip = "n.ip = \'" + str(ip) + "\'"
+		if asn != "":
+			asn = "n.asn = \'" + str(asn) + "\'"
+		if country != "":
+			country = "n.country = \'" + str(country) + "\'"
+
+		filter_str = ""
+		for s in [ip,asn,country]:
+			if s != "":
+				filter_str += s + " AND "
+		filter_str = filter_str.strip(" AND ")
+		
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+		else:
+			sys.stderr.write( "MATCH (n) RETURN COUNT(n) as count\n" )
 		session = self.driver.session()
 		try:
-			result = session.run("MATCH (n) return count(n) as count")
+			if filter_str != "":
+				result = session.run( "MATCH (n) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+			else:
+				result = session.run( "MATCH (n) RETURN COUNT(n) as count\n" )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()

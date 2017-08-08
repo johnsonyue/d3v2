@@ -86,8 +86,18 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.end_headers()
 			self.wfile.write(result)
 		elif ( action == "count" ):
+			ip = ""
+			asn = ""
+			country = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
+			if post.has_key("asn"):
+				asn = post["asn"].value
+			if post.has_key("country"):
+				country = post["country"].value
+
 			helper = db.db_helper()
-			result = helper.query_node_count()
+			result = helper.query_node_count(ip, asn, country)
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(result)

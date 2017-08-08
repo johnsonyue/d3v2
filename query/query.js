@@ -22,6 +22,24 @@ var num_node = -1;
 
 function init_num_node(){
 	var url = base_url + "count";
+	//construct post string.
+	var ip_text = d3.select("#ip_text").node().value;
+	var country_text = d3.select("#country_text").node().value;
+	var asn_text = d3.select("#asn_text").node().value;
+	
+	var params = {};
+	if(ip_text != ""){
+		params["ip"] = ip_text;
+	}
+	if(country_text != ""){
+		params["country"] = country_text;
+	}
+	if(asn_text != ""){
+		params["asn"] = asn_text;
+	}
+	
+	var post_str = $.param(params);
+
 	nodeNumRequest = new XMLHttpRequest();
 	nodeNumRequest.open("POST", url, true);
 	nodeNumRequest.onreadystatechange = function(){ 
@@ -30,7 +48,7 @@ function init_num_node(){
 		}
 	};
 	nodeNumRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
-	nodeNumRequest.send();
+	nodeNumRequest.send(post_str);
 }
 
 function is_date_time(date){
@@ -70,6 +88,7 @@ var filter_btn = d3.select("#filter_btn")
 function on_filter(){
 	start_page = 0;
 	active_page = 0;
+	init_num_node();
 	query_page();
 	d3.select("#prev").on("click",function(){
             start_page = 0;
@@ -87,7 +106,6 @@ function on_filter(){
 action to query a page.
 */
 function query_page(){
-	init_num_node();
 	var skip = start_page;
 	var limit = page_size;
 	//construct url
@@ -186,6 +204,7 @@ function neighbours_click(i){
 	neighboursRequest.onreadystatechange = on_neighbours_ready;
 	neighboursRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
 	neighboursRequest.send(post_str);
+	d3.select("#loader-1").style("display","block");
 }
 
 function on_neighbours_ready(){
@@ -204,6 +223,7 @@ function on_neighbours_ready(){
 			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.delay + '</td>');
 			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.type + '</td>');
 		}
+		d3.select("#loader-1").style("display","none");
 		$('#neighbour_modal').modal();
 	}
 }
