@@ -312,7 +312,7 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 			uniq_nodes[target] = num_uniq_nodes;
 			num_uniq_nodes++;
 		}
-		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target]});
+		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target], "type":edge_list[i].type});
 	}
 	
 	var nodes = [];
@@ -335,11 +335,18 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 
 	topo_svg.selectAll("line")
             .remove();
+	console.log(links);
 	var link = topo_svg.selectAll("line")
 		.data(links)
 		.enter().append("line")
-		.style("stroke", "#ccc")
-		.style("stroke-width", 2);
+		.style("stroke", function(d){
+			if (d.type == "D"){
+				return "#db213a";
+			}
+				return "#3498db";
+		})
+		.style("opacity", 0.7)
+		.style("stroke-width", 1);
 
 	topo_svg.selectAll("circle")
             .remove();
@@ -349,9 +356,9 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 		.attr("r", 5)
 		.attr("fill", function(d){
 			if (d.id == ip_queried){
-				return "red";
+				return "#db213a";
 			}
-			return "blue";
+			return "#3498db";
 		})
 		.call(force.drag);
 	
