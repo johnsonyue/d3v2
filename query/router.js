@@ -1,0 +1,3 @@
+$("#yearmonthpicker").datetimepicker({
+	format: 'YYYYMM'
+});
