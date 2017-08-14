@@ -2,7 +2,7 @@
 configurable variables
 global state variables
 */
-var base_url = "http://10.10.11.210:9966/";
+var base_url = "http://10.10.11.210:9967/";
 var num_page = -1;
 var page_size = 50;
 var page_disp = 15;
@@ -138,6 +138,7 @@ function query_page(){
 	xmlHttpRequest.onreadystatechange = on_query_page_ready;
 	xmlHttpRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
 	xmlHttpRequest.send(post_str);
+	d3.select("#loader-1").style("display","block");
 }
 
 var ip_list;
@@ -149,6 +150,7 @@ function on_query_page_ready(){
 		
 		refresh_table();
 		refresh_nav();
+		d3.select("#loader-1").style("display","none");
 	}
 }
 
@@ -211,6 +213,9 @@ function on_neighbours_ready(){
 	if(neighboursRequest.readyState == 4 && neighboursRequest.status == 200) {
 		var text = neighboursRequest.responseText;
 		nbr_list = JSON.parse(text);
+		if (nbr_list.length == 0){
+			return;
+		}
 		
 		var tbl = $("#neighbour_table");
 		tbl.find("tbody tr").remove();
@@ -229,6 +234,7 @@ function on_neighbours_ready(){
 }
 
 function monitors_click(i){
+	get_adj(i);
 	return;
 }
 
@@ -317,6 +323,7 @@ function topology_click(i){
 function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
 	var text = topoRequest.responseText;
 	var edge_list = JSON.parse(text);
+	console.log(edge_list);
 	
 	var uniq_nodes = {};
 	var links = [];
@@ -355,7 +362,6 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 
 	topo_svg.selectAll("line")
             .remove();
-	console.log(links);
 	var link = topo_svg.selectAll("line")
 		.data(links)
 		.enter().append("line")
@@ -410,5 +416,15 @@ function get_topo(ip){
 	topoRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
 	topoRequest.send(post_str);
 	
+	scroll();
 	d3.select("#loader-1").style("display","block");
+}
+
+/*
+scroll to svg
+*/
+
+function scroll(){
+	var element = document.getElementById("topo_svg");
+	element.scrollIntoView({block: "end"});
 }

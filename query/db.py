@@ -27,7 +27,7 @@ class db_helper():
 	def query_filtered_ips(self, ip, asn, country, skip, limit):
 		session = self.driver.session()
 		if ip != "":
-			ip = "n.ip = \'" + str(ip) + "\'"
+			ip = "n.ip =~ \'.*" + str(ip) + ".*\'"
 		if asn != "":
 			asn = "n.asn = \'" + str(asn) + "\'"
 		if country != "":
@@ -65,14 +65,15 @@ class db_helper():
 			return None
 
 		session = self.driver.session()
-		sys.stderr.write("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
+		#sys.stderr.write("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
+		sys.stderr.write("MATCH (in)-[edge:edge]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip RETURN in,out,edge\n" % (ip))
 		try:
-			result = session.run("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
+			#result = session.run("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
+			result = session.run("MATCH (in)-[edge:edge]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip RETURN in,out,edge\n" % (ip))
+			session.close()
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
-                        session.close()
-                        exit(-1)
-		session.close()
+			return json.dumps([])
 		
 		result_list = []
 		for record in result:
@@ -84,35 +85,59 @@ class db_helper():
 
 		return json.dumps(result_list)
 	
-	def query_ip_topo(self, ip):
+	def get_ip_topo(self, ip, depth):
 		if not is_ip_ligit(ip):
 			return None
 
 		session = self.driver.session()
-		sys.stderr.write("MATCH p=(in)-[edge:edge*1..3]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type})\n" % (ip,ip))
+		#sys.stderr.write("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type})\n" % (ip))
+		sys.stderr.write("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type}\n" % (depth,ip))
 		try:
-			result = session.run("MATCH p=(in)-[edge:edge*1..3]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' UNWIND edge AS e RETURN collect({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type}) AS edge\n" % (ip,ip))
+			#result = session.run("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type}) AS edge\n" % (ip))
+			result = session.run("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e),target:endNode(e),delay:e.delay,type:e.type} AS edge" % (depth,ip))
+			session.close()
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
-                        session.close()
-                        exit(-1)
-		session.close()
+			return []
 	
 		result_list = []
 		for record in result:
-			for e in record["edge"]:
-				edge_dict = {}
-				edge_dict["source"] = e["source"]["ip"]
-				edge_dict["target"] = e["target"]["ip"]
-				edge_dict["delay"] = e["delay"]
-				edge_dict["type"] = e["type"]
-				result_list.append(edge_dict)
+			result_list.append(record)
+		
+		return result_list
 	
-		return json.dumps(result_list)
+	def query_ip_topo(self, ip):
+		depth = 3
+		while depth > 1:
+			result_list = self.get_ip_topo(ip,depth)
+			depth -= 1
+			if len(result_list) <= 5000:
+				break
+
+		uniq_edge_list = {}
+		for record in result_list:
+			e = record["edge"]
+			source = e["source"].properties["ip"]
+			target = e["target"].properties["ip"]
+			delay = e["delay"]
+			edge_type = e["type"]
+			if not uniq_edge_list.has_key((source,target)):
+				uniq_edge_list[(source,target)] = {"delay":delay, "type":edge_type}
+
+		return_list = []
+		for k in uniq_edge_list.keys():
+			edge_dict = {}
+			edge_dict["source"] = k[0]
+			edge_dict["target"] = k[1]
+			edge_dict["delay"] = uniq_edge_list[k]["delay"]
+			edge_dict["type"] = uniq_edge_list[k]["type"]
+			return_list.append(edge_dict)
+	
+		return json.dumps(return_list)
 	
 	def query_node_count(self, ip, asn, country):
 		if ip != "":
-			ip = "n.ip = \'" + str(ip) + "\'"
+			ip = "n.ip =~ \'.*" + str(ip) + ".*\'"
 		if asn != "":
 			asn = "n.asn = \'" + str(asn) + "\'"
 		if country != "":
