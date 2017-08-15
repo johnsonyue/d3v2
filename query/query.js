@@ -174,13 +174,11 @@ function refresh_table(){
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append("<td>" + (active_page*page_size+i).toString() + "</td>");
 		row.find("tr:eq(" + i.toString() + ")")
-		   .append('<td><span class="flag-icon flag-icon-' + cc + '"></span></td>');
+		   .append('<td><span class="flag-icon flag-icon-' + cc + '"></span>&nbsp; ' + cc.toUpperCase() + '</td>');
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td>' + ip_list[i].ip + '</td>');
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td>' + ip_list[i].asn + '</td>');
-		row.find("tr:eq(" + i.toString() + ")")
-		   .append('<td>' + ip_list[i].country + '</td>');
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td><a style=cursor:pointer onclick=neighbours_click(' + i.toString() + ')>' + "detail" + '</a></td>');
 		row.find("tr:eq(" + i.toString() + ")")
@@ -234,7 +232,6 @@ function on_neighbours_ready(){
 }
 
 function monitors_click(i){
-	get_adj(i);
 	return;
 }
 

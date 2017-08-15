@@ -38,7 +38,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			
 	def do_POST(self):
 		action = self.path.replace('/','')
-		valid_action = ["neighbour", "filter", "count", "topo"]
+		valid_action = ["neighbour", "filter", "count", "topo", "router_count", "router_filter"]
 		if ( action not in valid_action ):
 			self.wfile.write("Invalid Action: %s" % action)
 			return
@@ -109,3 +109,35 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 				self.send_response(200)
 				self.end_headers()
 				self.wfile.write(result)
+		elif ( action == "router_count" ):
+			ip = ""
+			asn = ""
+			country = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
+			if post.has_key("asn"):
+				asn = post["asn"].value
+			if post.has_key("country"):
+				country = post["country"].value
+
+			helper = db.db_helper()
+			result = helper.query_router_count(ip, asn, country)
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)
+		elif ( action == "router_filter" ):
+			ip = ""
+			asn = ""
+			country = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
+			if post.has_key("asn"):
+				asn = post["asn"].value
+			if post.has_key("country"):
+				country = post["country"].value
+		
+			helper = db.db_helper()
+			result = helper.query_filtered_routers(ip, asn, country, skip, limit)
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)

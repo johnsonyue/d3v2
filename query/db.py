@@ -40,14 +40,14 @@ class db_helper():
 		filter_str = filter_str.strip(" AND ")
 		
 		if filter_str != "":
-			sys.stderr.write( "MATCH (n) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+			sys.stderr.write( "MATCH (n:node) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
 		else:
-			sys.stderr.write( "MATCH (n) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+			sys.stderr.write( "MATCH (n:node) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
 		try:
 			if filter_str != "":
-				result = session.run( "MATCH (n) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+				result = session.run( "MATCH (n:node) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
 			else:
-				result = session.run( "MATCH (n) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+				result = session.run( "MATCH (n:node) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
@@ -150,15 +150,15 @@ class db_helper():
 		filter_str = filter_str.strip(" AND ")
 		
 		if filter_str != "":
-			sys.stderr.write( "MATCH (n) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+			sys.stderr.write( "MATCH (n:node) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 		else:
-			sys.stderr.write( "MATCH (n) RETURN COUNT(n) as count\n" )
+			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n) as count\n" )
 		session = self.driver.session()
 		try:
 			if filter_str != "":
-				result = session.run( "MATCH (n) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+				result = session.run( "MATCH (n:node) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 			else:
-				result = session.run( "MATCH (n) RETURN COUNT(n) as count\n" )
+				result = session.run( "MATCH (n:node) RETURN COUNT(n) as count\n" )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
@@ -169,3 +169,77 @@ class db_helper():
 		for record in result:
 			count = record["count"]
 		return count
+
+	def query_router_count(self, ip, asn, country):
+		if ip != "":
+			ip = "n.ip =~ \'.*" + str(ip) + ".*\'"
+		if asn != "":
+			asn = "n.asn =~ \'.*" + str(asn) + ".*\'"
+		if country != "":
+			country = "n.country =~ \'.*" + str(country) + ".*\'"
+
+		filter_str = ""
+		for s in [ip,asn,country]:
+			if s != "":
+				filter_str += s + " AND "
+		filter_str = filter_str.strip(" AND ")
+		
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n:router) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+		else:
+			sys.stderr.write( "MATCH (n:router) RETURN COUNT(n) as count\n" )
+		session = self.driver.session()
+		try:
+			if filter_str != "":
+				result = session.run( "MATCH (n:router) WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
+			else:
+				result = session.run( "MATCH (n:router) RETURN COUNT(n) as count\n" )
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		count = 0
+		for record in result:
+			count = record["count"]
+		return count
+
+	def query_filtered_routers(self, ip, asn, country, skip, limit):
+		session = self.driver.session()
+		if ip != "":
+			ip = "n.ip =~ \'.*" + str(ip) + ".*\'"
+		if asn != "":
+			asn = "n.asn =~ \'" + str(asn) + ".*\'"
+		if country != "":
+			country = "n.country =~ \'" + str(country) + ".*\'"
+
+		filter_str = ""
+		for s in [ip,asn,country]:
+			if s != "":
+				filter_str += s + " AND "
+		filter_str = filter_str.strip(" AND ")
+		if filter_str != "":
+			filter_str += "AND "
+		filter_str += "n.node_id =~ \'.*N.*\'"
+		
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n:router) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+		else:
+			sys.stderr.write( "MATCH (n:router) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+		try:
+			if filter_str != "":
+				result = session.run( "MATCH (n:router) WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+			else:
+				result = session.run( "MATCH (n:router) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		result_list = []
+		for record in result:
+			result_list.append(record["n"].properties)
+	
+		return json.dumps(result_list)
