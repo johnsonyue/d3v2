@@ -22,7 +22,8 @@ var page_disp = 15;
 var start_page = 0;
 var active_page = 0;
 
-var width = 960, height = 600;
+var height = 800;
+var width = document.getElementById('svg_div').getBoundingClientRect().width;
 var max_radius = 35, min_radius = 5;
 /*
 Description:
@@ -526,18 +527,22 @@ function on_node_out(){
 }
 
 var expand_keydown = false; //'e'
+var static_keydown = false; //'s'
 d3.select("#svg_div")
 	.on("keydown",function(){
-		if (!expand_keydown && d3.event.keyCode == 69){expand_keydown = true;}
+		if (!expand_keydown && d3.event.keyCode == 69){expand_keydown = true;} //'e'
+		if (!static_keydown && d3.event.keyCode == 83){static_keydown = true;} //'s'
 	})
 	.on("keyup",function(){
-		if (d3.event.keyCode == 69) {expand_keydown = false;}
+		if (d3.event.keyCode == 69) {expand_keydown = false;} //'e'
+		if (d3.event.keyCode == 83) {static_keydown = false;} //'s'
+		if (d3.event.keyCode == 72) {$('#help_modal').modal();} //'h'
 	});
 
 /*
 on node click.
 */
-function on_node_click(){ if (expand_keydown){
+function on_node_click(d){ if (expand_keydown){
 	var ind = d3.select(this).attr("id"); //here index means the identifier used by force layout.
 	var i = get_index(ind); //note here index of the DOM means order in nodes array
 	if (degree_dict[ind] != 1 && nodes[i]["child"].length == 0){ //shrink
@@ -674,6 +679,12 @@ function on_node_click(){ if (expand_keydown){
 			.attr("id", function(d){
 				d3.select(this).moveToFront();
 				return d.id;
+			})
+			.attr("class", function(d){
+				if (d.fixed){
+					return "fixed";
+				}
+				return "";
 			});
 
 		force.on("tick", function() {
@@ -689,6 +700,13 @@ function on_node_click(){ if (expand_keydown){
 		
 		force.resume();
 		calc_degree();
+	}
+}
+else if(static_keydown){
+	if (d.fixed){
+		d3.select(this).classed("fixed", d.fixed = false);
+	}else{
+		d3.select(this).classed("fixed", d.fixed = true);
 	}
 }}
 
