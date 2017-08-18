@@ -243,3 +243,68 @@ class db_helper():
 			result_list.append(record["n"].properties)
 	
 		return json.dumps(result_list)
+
+	def query_router_neighbours(self, node_id):
+		session = self.driver.session()
+		sys.stderr.write("MATCH (in)-[link:link]-(out) WHERE in.node_id = \'%s\' RETURN in,out,link\n" % (node_id))
+		try:
+			result = session.run("MATCH (in)-[link:link]-(out) WHERE in.node_id = \'%s\' RETURN in,out,link\n" % (node_id))
+			session.close()
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+			return json.dumps([])
+		
+		result_list = []
+		for record in result:
+			record_dict = {}
+			record_dict["in"] = record["in"].properties
+			record_dict["out"] = record["out"].properties
+			record_dict["link"] = record["link"].properties
+			result_list.append(record_dict)
+
+		return json.dumps(result_list)
+
+	def get_router_topo(self, node_id, depth):
+		session = self.driver.session()
+		sys.stderr.write("MATCH p=(in)-[link:link*1..%d]-(out) WHERE in.node_id = \'%s\' UNWIND link AS e RETURN {source:in.node_id, target:out.node_id, a_ip:e.a_ip, b_ip:e.b_ip} AS link" % (depth,node_id))
+		try:
+			result = session.run("MATCH p=(in)-[link:link*1..%d]-(out) WHERE in.node_id = \'%s\' UNWIND link AS e RETURN {source:in.node_id, target:out.node_id, a_ip:e.a_ip, b_ip:e.b_ip} AS link" % (depth,node_id))
+			session.close()
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+			return []
+	
+		result_list = []
+		for record in result:
+			result_list.append(record)
+		
+		return result_list
+	
+	def query_router_topo(self, node_id):
+		depth = 3
+		while depth > 1:
+			result_list = self.get_router_topo(node_id,depth)
+			depth -= 1
+			if len(result_list) <= 5000:
+				break
+
+		uniq_edge_list = {}
+		for record in result_list:
+			e = record["link"]
+			source = e["source"]
+			target = e["target"]
+			a_ip = e["a_ip"]
+			b_ip = e["b_ip"]
+			if not uniq_edge_list.has_key((source,target)):
+				uniq_edge_list[(source,target)] = {"a_ip":a_ip, "b_ip":b_ip}
+
+		return_list = []
+		for k in uniq_edge_list.keys():
+			edge_dict = {}
+			edge_dict["source"] = k[0]
+			edge_dict["target"] = k[1]
+			edge_dict["a_ip"] = uniq_edge_list[k]["a_ip"]
+			edge_dict["b_ip"] = uniq_edge_list[k]["b_ip"]
+			return_list.append(edge_dict)
+	
+		return json.dumps(return_list)

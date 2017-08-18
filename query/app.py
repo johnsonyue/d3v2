@@ -38,7 +38,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			
 	def do_POST(self):
 		action = self.path.replace('/','')
-		valid_action = ["neighbour", "filter", "count", "topo", "router_count", "router_filter"]
+		valid_action = ["neighbour", "filter", "count", "topo", "router_count", "router_filter", "router_neighbour", "neighbour_topo"]
 		if ( action not in valid_action ):
 			self.wfile.write("Invalid Action: %s" % action)
 			return
@@ -141,3 +141,19 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(result)
+		elif ( action == "router_neighbour" ):
+			if post.has_key("node_id"):
+				node_id = post["node_id"].value
+				helper = db.db_helper()
+				result = helper.query_router_neighbours(node_id)
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write(result)
+		elif ( action == "neighbour_topo" ):
+			if post.has_key("node_id"):
+				node_id = post["node_id"].value
+				helper = db.db_helper()
+				result = helper.query_router_topo(node_id)
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write(result)

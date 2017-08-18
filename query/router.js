@@ -4,7 +4,7 @@ global state variables
 */
 var base_url = "http://10.10.11.210:9967/";
 var num_page = -1;
-var page_size = 25;
+var page_size = 50;
 var page_disp = 15;
 var start_page = 0;
 var active_page = 0;
@@ -284,4 +284,184 @@ function ip_click(i){
 	var fake_row = row.find(".fake_row:eq("+ i.toString()+")");
 	fake_row.css("display","none");
 	//fake_row.collapse();
+}
+
+/*
+listener for neighbour, monitor cell.
+*/
+function neighbours_click(i){
+	var url = base_url + "router_neighbour";
+	var node_id = router_list[parseInt(i)].node_id;
+	var params = {
+		"node_id":node_id
+	}
+	var post_str = $.param(params);
+
+	neighboursRequest = new XMLHttpRequest();
+	neighboursRequest.open("POST", url, true);
+	neighboursRequest.onreadystatechange = on_neighbours_ready;
+	neighboursRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+	neighboursRequest.send(post_str);
+	d3.select("#loader-1").style("display","block");
+}
+
+function on_neighbours_ready(){
+	if(neighboursRequest.readyState == 4 && neighboursRequest.status == 200) {
+		var text = neighboursRequest.responseText;
+		nbr_list = JSON.parse(text);
+
+		var tbl = $("#neighbour_table");
+		tbl.find("tbody tr").remove();
+		for (var i=0; i<nbr_list.length; i++) {
+			var row = tbl.find("tbody").append("<tr></tr>");
+			row.find("tr:eq("+ i.toString()+")").append('<td>'+ (i).toString()+'</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].in.node_id + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].out.node_id + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].link.a_ip + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].link.b_ip + '</td>');
+		}
+		d3.select("#loader-1").style("display","none");
+		$('#neighbour_modal').modal();
+	}
+}
+
+/*
+listener for go_btn
+*/
+var go_btn = d3.select("#go_btn")
+  .on("click", go_click);
+
+function go_click(){
+    var value = $("#go_text").val();
+    var reg = new RegExp("\\d+");
+    if (!reg.test(value)){
+        alert("wrong page format");
+        return false;
+    }
+    if (parseInt(value) > num_page || parseInt(value) < 1){
+        alert("page number out of range");
+        return false;
+    }
+
+    active_page = parseInt(value) - 1;
+    start_page = active_page;
+
+    query_page();
+}
+
+/*
+topology svg
+*/
+function topology_click(i){
+	get_topo(router_list[i].node_id);
+}
+
+function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
+	var text = topoRequest.responseText;
+	var edge_list = JSON.parse(text);
+	
+	console.log(edge_list);
+	
+	var uniq_nodes = {};
+	var links = [];
+	var num_uniq_nodes = 0;
+	for( var i=0; i < edge_list.length; i++ ){
+		var source = edge_list[i].source;
+		var target = edge_list[i].target;
+		if ( !(source in uniq_nodes) ){
+			uniq_nodes[source] = num_uniq_nodes;
+			num_uniq_nodes++;
+		}
+		if ( !(target in uniq_nodes) ){
+			uniq_nodes[target] = num_uniq_nodes;
+			num_uniq_nodes++;
+		}
+		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target], "type":edge_list[i].type});
+	}
+	
+	var nodes = [];
+	for( var key in uniq_nodes ){
+		nodes.push({"index":uniq_nodes[key], "id":key});
+	}
+		
+	var width = 960, height = 600;
+	var topo_svg = d3.select("#topo_svg")
+		.attr("width",width)
+		.attr("height",height);
+	
+	var force = d3.layout.force()
+		.nodes(nodes)
+		.links(links)
+		.size([width, height])
+		.linkDistance([50])
+		.charge([-100])
+		.start();
+
+	topo_svg.selectAll("line")
+            .remove();
+	var link = topo_svg.selectAll("line")
+		.data(links)
+		.enter().append("line")
+		.style("stroke", function(d){
+			if (d.type == "D"){
+				return "#db213a";
+			}
+				return "#3498db";
+		})
+		.style("opacity", 0.7)
+		.style("stroke-width", 1);
+
+	topo_svg.selectAll("circle")
+            .remove();
+	var node = topo_svg.selectAll("circle")
+		.data(nodes)
+		.enter().append("circle")
+		.attr("r", 5)
+		.attr("fill", function(d){
+			if (d.id == router_queried){
+				return "#db213a";
+			}
+			return "#3498db";
+		})
+		.call(force.drag);
+	
+	force.on("tick", function() {
+		link.attr("x1", function(d) { return d.source.x; })
+		.attr("y1", function(d) { return d.source.y; })
+		.attr("x2", function(d) { return d.target.x; })
+		.attr("y2", function(d) { return d.target.y; });
+
+		node.attr("cx", function(d) { return d.x; })
+		.attr("cy", function(d) { return d.y; });
+	});
+
+	d3.select("#loader-1").style("display","none");
+}}
+
+var router_queried;
+function get_topo(node_id){
+	router_queried = node_id;
+	var url = base_url + "neighbour_topo";
+	var params = {
+		"node_id":node_id
+	}
+	var post_str = $.param(params);
+
+	topoRequest = new XMLHttpRequest();
+	topoRequest.open("POST", url, true);
+	topoRequest.onreadystatechange = draw_topo;
+	topoRequest.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+	topoRequest.send(post_str);
+	
+	scroll();
+	d3.select("#loader-1").style("display","block");
+}
+
+/*
+scroll to svg
+*/
+
+function scroll(){
+	var element = document.getElementById("topo_svg");
+	element.scrollIntoView({block: "end"});
 }

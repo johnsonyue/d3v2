@@ -6,7 +6,7 @@
 	},
 	"db":{
 		"address":"10.10.222.135",
-		"port":"7689",
+		"port":"7686",
 		"username":"neo4j",
 		"password":"1q2w3e4r"
 	}

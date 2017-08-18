@@ -1,3 +1,16 @@
+d3.selection.prototype.moveToFront = function() {  
+	return this.each(function(){
+		this.parentNode.appendChild(this);
+	});
+};
+d3.selection.prototype.moveToBack = function() {  
+	return this.each(function() { 
+		var firstChild = this.parentNode.firstChild; 
+		if (firstChild) { 
+			this.parentNode.insertBefore(this, firstChild); 
+		} 
+	});
+};
 /*
 configurable variables
 global state variables
@@ -9,6 +22,8 @@ var page_disp = 15;
 var start_page = 0;
 var active_page = 0;
 
+var width = 960, height = 600;
+var max_radius = 35, min_radius = 5;
 /*
 Description:
     Initially set filter_btn and go_btn to 'disabled',
@@ -317,14 +332,43 @@ function topology_click(i){
 	get_topo(ip_list[i].ip);
 }
 
+var degree_dict = {};
+function calc_degree(){
+	//calculate degree.
+	degree_dict = {};
+	for (var i=0; i<nodes.length; i++){
+		node = nodes[i];
+		degree_dict[node.id] = 0;
+	}
+	for (var i=0; i<links.length; i++){
+		link = links[i];
+		s = link["source"].id;
+		if (s in degree_dict){
+			degree_dict[s]++;
+		}else{
+			degree_dict[s] = 1;
+		}
+		t = link["target"].id;
+		if (t in degree_dict){
+			degree_dict[t]++;
+		}else{
+			degree_dict[t] = 1;
+		}
+	}
+}
+
+var nodes = [], links = [];
+var node, link;
+var force;
+var radius_scale;
 function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
 	var text = topoRequest.responseText;
 	var edge_list = JSON.parse(text);
-	console.log(edge_list);
 	
 	var uniq_nodes = {};
-	var links = [];
+	links = [];
 	var num_uniq_nodes = 0;
+	var num_links = 0;
 	for( var i=0; i < edge_list.length; i++ ){
 		var source = edge_list[i].source;
 		var target = edge_list[i].target;
@@ -336,25 +380,28 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 			uniq_nodes[target] = num_uniq_nodes;
 			num_uniq_nodes++;
 		}
-		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target], "type":edge_list[i].type});
+		links.push({"source":uniq_nodes[source], "target":uniq_nodes[target], "type":edge_list[i].type, "id":num_links});
+		num_links++;
 	}
 	
-	var nodes = [];
+	nodes = [];
 	for( var key in uniq_nodes ){
-		nodes.push({"index":uniq_nodes[key], "id":key});
+		nodes.push({"id":uniq_nodes[key], "ip":key, "child":[], "link":[]});
 	}
+	
+	//calculate radius_scale
+	radius_scale = d3.scale.linear().domain([0,nodes.length]).range([min_radius,max_radius]);
 		
-	var width = 960, height = 600;
 	var topo_svg = d3.select("#topo_svg")
 		.attr("width",width)
 		.attr("height",height);
 	
-	var force = d3.layout.force()
+	force = d3.layout.force()
 		.nodes(nodes)
 		.links(links)
 		.size([width, height])
 		.linkDistance([50])
-		.charge([-100])
+		.charge([-200])
 		.start();
 
 	topo_svg.selectAll("line")
@@ -371,20 +418,57 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 		.style("opacity", 0.7)
 		.style("stroke-width", 1);
 
+	//debug
+	//topo_svg.selectAll(".node")
+        //   .remove();
 	topo_svg.selectAll("circle")
             .remove();
-	var node = topo_svg.selectAll("circle")
+
+	/*
+	var g = topo_svg.selectAll(".node")
 		.data(nodes)
-		.enter().append("circle")
-		.attr("r", 5)
+		.enter().append("g");
+	g.append("circle")
+		.attr("r", function(d){
+			//return radius_scale(d.child.length);
+			return radius_scale(get_child_cnt(d.child));
+		})
 		.attr("fill", function(d){
-			if (d.id == ip_queried){
+			if (d.ip == ip_queried){
 				return "#db213a";
 			}
 			return "#3498db";
 		})
+		.attr("id", function(d){
+			return d.id;
+		})
+		.on("mouseover",on_node_over)
+		.on("mouseout",on_node_out)
+		.on("click",on_node_click);
+	g.append("text")
+		.text(function(d){return d.id;});
+	*/
+	var node = topo_svg.selectAll("circle")
+		.data(nodes)
+		.enter().append("circle")
+		.attr("r", function(d){
+			//return radius_scale(d.child.length);
+			return radius_scale(get_child_cnt(d.child));
+		})
+		.attr("fill", function(d){
+			if (d.ip == ip_queried){
+				return "#db213a";
+			}
+			return "#3498db";
+		})
+		.attr("id", function(d){
+			return d.id;
+		})
+		.on("mouseover",on_node_over)
+		.on("mouseout",on_node_out)
+		.on("click",on_node_click)
 		.call(force.drag);
-	
+
 	force.on("tick", function() {
 		link.attr("x1", function(d) { return d.source.x; })
 		.attr("y1", function(d) { return d.source.y; })
@@ -393,7 +477,9 @@ function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 20
 
 		node.attr("cx", function(d) { return d.x; })
 		.attr("cy", function(d) { return d.y; });
+		//g.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 	});
+	calc_degree();
 
 	d3.select("#loader-1").style("display","none");
 }}
@@ -424,4 +510,202 @@ scroll to svg
 function scroll(){
 	var element = document.getElementById("topo_svg");
 	element.scrollIntoView({block: "end"});
+}
+
+/*
+callback for mouseover/mouseout listener of svg nodes.
+*/
+function on_node_over(){
+	var ind = d3.select(this).attr("id");
+	var i = get_index(ind);
+	d3.select("#map_label").html(nodes[i].ip+" "+degree_dict[nodes[i].id]+" "+nodes[i].id);
+}
+
+function on_node_out(){
+	return;
+}
+
+var expand_keydown = false; //'e'
+d3.select("#svg_div")
+	.on("keydown",function(){
+		if (!expand_keydown && d3.event.keyCode == 69){expand_keydown = true;}
+	})
+	.on("keyup",function(){
+		if (d3.event.keyCode == 69) {expand_keydown = false;}
+	});
+
+/*
+on node click.
+*/
+function on_node_click(){ if (expand_keydown){
+	var ind = d3.select(this).attr("id"); //here index means the identifier used by force layout.
+	var i = get_index(ind); //note here index of the DOM means order in nodes array
+	if (degree_dict[ind] != 1 && nodes[i]["child"].length == 0){ //shrink
+		//modify data.
+		var leaf_peers = {};
+		var peer_links = {};
+		for ( var j=0; j<links.length; j++ ){
+			var link = links[j];
+			if (link["source"].id == ind || link["target"].id == ind){ //peer
+				var peer_ind = link["source"].id == ind ? link["target"].id : link["source"].id;
+				if (degree_dict[peer_ind] != 1){ //leaf
+					continue
+				}
+
+				//record node to be removed.
+				var peer_i = get_index(peer_ind);
+				var peer = nodes[peer_i];
+				if (!(peer_ind in leaf_peers)){
+					leaf_peers[peer_ind] = peer;
+				}
+				
+				if (!(peer_ind in peer_links)){
+					 peer_links[peer_ind] = {"id":links[j].id,"type":links[j].type};
+				}
+				//delete link
+				delete links[j];
+			}
+		}
+		
+		for ( var peer_ind in leaf_peers ){
+			var peer_i = get_index(peer_ind);
+			var peer = leaf_peers[peer_ind];
+			var peer_link = peer_links[peer_ind];
+			//record peer
+			nodes[i]["child"].push(peer);
+			nodes[i]["link"].push(peer_link);
+			//delete peer
+			delete nodes[peer_i];
+		}
+		
+		var temp = [];
+		for ( var j=0; j<links.length; j++) if (links[j] != undefined) {
+			temp.push(links[j]);
+		}
+		links = temp;
+
+		var temp = [];
+		for ( var j=0; j<nodes.length; j++) if (nodes[j] != undefined) {
+			temp.push(nodes[j]);
+		}
+		nodes = temp;
+
+		//update svg.
+		force.nodes(nodes, function(d){return d.id;})
+			.links(links, function(d){return d.id;});
+
+		var topo_svg = d3.select("#topo_svg");
+
+		var link = topo_svg.selectAll("line")
+			.data(links, function(d){return d.id;})
+			//.exit().style("stroke-opacity", 0.3);
+			//.exit().style("stroke","black");
+			.exit().remove();
+
+		var node = topo_svg.selectAll("circle");
+		node.data(nodes, function(d){return d.id;})
+			.exit().remove();
+		node.attr("fill",function(d){
+				if (d.ip == ip_queried){
+					return "#db213a";
+				}
+				if (d.child.length != 0){
+					return "#90d4b4";
+				}
+				return "#3498db";
+			})
+			.attr("r", function(d){
+				//return radius_scale(d.child.length);
+				return radius_scale(get_child_cnt(d.child));
+			});
+		calc_degree();
+	}
+	else if (nodes[i]["child"].length != 0){ //expand
+		//modify data.
+		for (var j=0; j<nodes[i].child.length; j++){
+			//add node.
+			c = nodes[i].child[j];
+			nodes.push(c);
+			
+			//add link.
+			l = nodes[i].link[j];
+			links.push({"source":nodes[i],"target":c,"type":l["type"],"id":l["id"]});
+		}
+		nodes[i].child = [];
+		nodes[i].link = [];
+
+		//update svg.
+		force.nodes(nodes, function(d){return d.id;})
+			.links(links, function(d){return d.id;});
+
+		var topo_svg = d3.select("#topo_svg");
+
+		var link = topo_svg.selectAll("line")
+			.data(links, function(d){return d.id;})
+			.enter().append("line")
+			.style("stroke", function(d){
+				if (d.type == "D"){
+					return "#db213a";
+				}
+					return "#3498db";
+			})
+			.style("opacity", 0.7)
+			.style("stroke-width", 1);
+
+		var node = topo_svg.selectAll("circle")
+			.data(nodes, function(d){return d.id;})
+			.enter().append("circle")
+			.on("mouseover",on_node_over)
+			.on("mouseout",on_node_out)
+			.on("click",on_node_click)
+			.call(force.drag);
+		topo_svg.selectAll("circle").attr("fill",function(d){
+				if (d.ip == ip_queried){
+					return "#db213a";
+				}
+				if (d.child.length != 0){
+					return "#90d4b4";
+				}
+				return "#3498db";
+			})
+			.attr("r", function(d){
+				return radius_scale(get_child_cnt(d.child));
+			})
+			.attr("id", function(d){
+				d3.select(this).moveToFront();
+				return d.id;
+			});
+
+		force.on("tick", function() {
+			topo_svg.selectAll("line").attr("x1", function(d) { return d.source.x; })
+			.attr("y1", function(d) { return d.source.y; })
+			.attr("x2", function(d) { return d.target.x; })
+			.attr("y2", function(d) { return d.target.y; });
+
+			topo_svg.selectAll("circle").attr("cx", function(d) { return d.x; })
+			.attr("cy", function(d) { return d.y; });
+			//g.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+		});
+		
+		force.resume();
+		calc_degree();
+	}
+}}
+
+function get_index(ind){
+	for (var i=0; i<nodes.length; i++){
+		if (nodes[i] != undefined && nodes[i].index == ind){
+			return i;
+		}
+	}
+	return -1;
+}
+
+function get_child_cnt(child_list){
+	var cnt = 0;
+	for (var i=0; i<child_list.length; i++){
+		child = child_list[i];
+		cnt += get_child_cnt(child.child) + 1;
+	}
+	return cnt;
 }
