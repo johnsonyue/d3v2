@@ -8,17 +8,14 @@
     <link href="../bootstrap-3.3.7-dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../bootstrap-3.3.7-dist/css/dashboard.css" rel="stylesheet">
     <link href="../bootstrap-3.3.7-dist/css/flag-icon-css/css/flag-icon.css" rel="stylesheet">
-    <link href="../bootstrap-3.3.7-dist/datetimepicker/css/bootstrap-datetimepicker.min.css" rel="stylesheet">
 
-    <link href="query.css" rel="stylesheet">
+    <link href="ip.css" rel="stylesheet">
 </head>
 
 <body>
 <script src="../bootstrap-3.3.7-dist/js/d3.min.js"></script>
 <script src="../bootstrap-3.3.7-dist/js/jquery.min.js"></script>
 <script src="../bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
-<script src="../bootstrap-3.3.7-dist/js/moment.js"></script>
-<script src="../bootstrap-3.3.7-dist/datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
 <div class="loader-wrapper" id="loader-1" style="display: none;">
 	<div id="loader"></div>
 </div>
@@ -61,31 +58,13 @@
                 <li><a>map</a></li>
             </ul>
             <ul class="nav nav-sidebar">
-                <li><a href="ip.html">ip</a></li>
-                <li class="active"><a>query</a></li>
+                <li class="active"><a>ip</a></li>
+                <li><a href="query.html">query</a></li>
                 <li><a href="router.html">router</a></li>
             </ul>
         </div>
         <div class="col-md-10 col-md-offset-2 main">
-            <div class="col-md-10"><h1 class="page-header">Query</h1><label id="source_label">Select data source and date.</label></div>
-            <div class="col-md-10">
-                <div class="form-inline form-group">
-		    <select id="source_select" class="form-control">
-                        <option>CAIDA</option>
-                        <option>iPlane</option>
-                        <option>looking glass</option>
-                        <option>HITNISL</option>
-                    </select>
-		    <div class="input-group date" id="yearmonthpicker">
-                        <input type="text" class="form-control" id="date_text" placeholder="YYYYMM">
-                        <span class="input-group-addon">
-                            <span class="glyphicon glyphicon-calendar"></span>
-                        </span>
-		    </div>
-                    <button type="submit" class="form-control" id="query_btn">set</button>
-                </div>
-            </div>
-
+            <div class="col-md-10"><h1 class="page-header">IP</h1></div>
             <div class="col-md-10">
                 <h2 class="sub-header">table</h2>
                 <label>fill in filtering condition, hit filter to trigger query.</label>
@@ -93,11 +72,9 @@
             <div class="col-md-10">
                 <div class="form-inline form-group">
                     <input id="ip_text" type="text" class="form-control" placeholder="IP address">
-                    <input id="country_text" type="text" class="form-control" placeholder="country">
-                    <input id="asn_text" type="text" class="form-control" placeholder="ASN">
-                    <button type="submit" class="form-control" id="filter_btn" disabled>filter</button>
+                    <button type="submit" class="form-control" id="filter_btn">filter</button>
 
-                    <button type="submit" class="form-control pull-right" id="go_btn" disabled>go</button>
+                    <button type="submit" class="form-control pull-right" id="go_btn">go</button>
                     <input type="text" class="form-control pull-right" placeholder="page" id="go_text">
                 </div>
             </div>
@@ -210,6 +187,6 @@
     </div>
 </div>
 
-<script src="query.js"></script>
+<script src="ip.js"></script>
 </body>
 </html>

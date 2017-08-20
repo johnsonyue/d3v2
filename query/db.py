@@ -91,10 +91,10 @@ class db_helper():
 
 		session = self.driver.session()
 		#sys.stderr.write("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type})\n" % (ip))
-		sys.stderr.write("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type}\n" % (depth,ip))
+		sys.stderr.write("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type,in:startNode(e),out:endNode(e)} AS edge limit 5001\n" % (depth,ip))
 		try:
 			#result = session.run("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type}) AS edge\n" % (ip))
-			result = session.run("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e),target:endNode(e),delay:e.delay,type:e.type} AS edge" % (depth,ip))
+			result = session.run("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e),target:endNode(e),delay:e.delay,type:e.type,in:startNode(e), out:endNode(e)} AS edge limit 5001" % (depth,ip))
 			session.close()
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
@@ -121,8 +121,10 @@ class db_helper():
 			target = e["target"].properties["ip"]
 			delay = e["delay"]
 			edge_type = e["type"]
+			ingress = e["in"].properties
+			outgress = e["out"].properties
 			if not uniq_edge_list.has_key((source,target)):
-				uniq_edge_list[(source,target)] = {"delay":delay, "type":edge_type}
+				uniq_edge_list[(source,target)] = {"delay":delay, "type":edge_type, "in":ingress, "out":outgress}
 
 		return_list = []
 		for k in uniq_edge_list.keys():
@@ -131,6 +133,8 @@ class db_helper():
 			edge_dict["target"] = k[1]
 			edge_dict["delay"] = uniq_edge_list[k]["delay"]
 			edge_dict["type"] = uniq_edge_list[k]["type"]
+			edge_dict["in"] = uniq_edge_list[k]["in"]
+			edge_dict["out"] = uniq_edge_list[k]["out"]
 			return_list.append(edge_dict)
 	
 		return json.dumps(return_list)

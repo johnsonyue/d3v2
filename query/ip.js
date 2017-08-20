@@ -31,30 +31,16 @@ Description:
     Enabled after hitting 'set' with valid date given.
     Disabled again if hitting 'set' with invalid date given.
 */
-$("#yearmonthpicker").datetimepicker({
-	format: 'YYYYMMDD'
-});
-var query_btn = d3.select("#query_btn")
-    .on("click",set_source_date);
-var source, date;
 var num_node = -1;
 
 function init_num_node(){
 	var url = base_url + "count";
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
-	var country_text = d3.select("#country_text").node().value;
-	var asn_text = d3.select("#asn_text").node().value;
 	
 	var params = {};
 	if(ip_text != ""){
 		params["ip"] = ip_text;
-	}
-	if(country_text != ""){
-		params["country"] = country_text;
-	}
-	if(asn_text != ""){
-		params["asn"] = asn_text;
 	}
 	
 	var post_str = $.param(params);
@@ -77,25 +63,6 @@ function is_date_time(date){
     }
     return true;
 }
-
-function set_source_date(){
-	source = d3.select("#source_select").node().value;
-	date = d3.select("#date_text").node().value;
-	if ( date == "" || (! is_date_time(date)) ){
-		if (date == ""){
-			d3.select("#source_label").html("using "+source+"'s data, date not yet set");
-		}else{
-			d3.select("#source_label").html("using "+source+"'s data, date given is invalid");
-		}
-		d3.select("#filter_btn").attr("disabled",true);
-		d3.select("#go_btn").attr("disabled",true);
-	}else{
-		d3.select("#source_label").html("using "+source+"'s data, gathered on "+date);
-		d3.select("#filter_btn").attr("disabled",null);
-		d3.select("#go_btn").attr("disabled",null);
-	}
-}
-
 
 /*
 Description:
@@ -132,8 +99,6 @@ function query_page(){
 	
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
-	var country_text = d3.select("#country_text").node().value;
-	var asn_text = d3.select("#asn_text").node().value;
 	
 	var params = {
 		"skip":skip,
@@ -141,12 +106,6 @@ function query_page(){
 	}
 	if(ip_text != ""){
 		params["ip"] = ip_text;
-	}
-	if(country_text != ""){
-		params["country"] = country_text;
-	}
-	if(asn_text != ""){
-		params["asn"] = asn_text;
 	}
 	
 	var post_str = $.param(params);
@@ -369,6 +328,7 @@ var radius_scale;
 function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
 	var text = topoRequest.responseText;
 	var edge_list = JSON.parse(text);
+	console.log(edge_list);
 	
 	var uniq_nodes = {};
 	nodes_info = {};
