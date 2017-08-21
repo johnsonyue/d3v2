@@ -17,7 +17,7 @@ global state variables
 */
 var base_url = "http://10.10.222.135:9966/";
 var num_page = -1;
-var page_size = 50;
+var page_size = 100;
 var page_disp = 15;
 var start_page = 0;
 var active_page = 0;
@@ -43,9 +43,10 @@ function init_num_node(){
 	if(ip_text != ""){
 		params["ip"] = ip_text;
 	}
-	var reg = new RegExp("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+	
+	var reg = new RegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 	if (!reg.test(ip_text)){
-		alert("invalid ip address");
+		return;
 	}
 	var reg = new RegExp("-*\\d+");
 	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
@@ -103,7 +104,7 @@ function on_filter(){
 action to query a page.
 */
 function query_page(){
-	var skip = start_page;
+	var skip = active_page*page_size;
 	var limit = page_size;
 	//construct url
 	var url = base_url + "fuzzy_filter";
@@ -121,9 +122,10 @@ function query_page(){
 		params["ip"] = ip_text;
 	}
 
-	var reg = new RegExp("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+	var reg = new RegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
 	if (!reg.test(ip_text)){
 		alert("invalid ip address");
+		return;
 	}
 	var reg = new RegExp("-*\\d+");
 	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
@@ -346,7 +348,6 @@ var radius_scale;
 function draw_topo(){ if(topoRequest.readyState == 4 && topoRequest.status == 200) {
 	var text = topoRequest.responseText;
 	var edge_list = JSON.parse(text);
-	console.log(edge_list);
 	
 	var uniq_nodes = {};
 	nodes_info = {};

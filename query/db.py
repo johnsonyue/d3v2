@@ -21,9 +21,9 @@ def is_ip_ligit(ip):
 #output: 10001000b, 
 #        10001111b
 def remainder_range(octet, r):
-	high = octet/math.pow(2,8-r)
-	min_oct = high*math.pow(2,8-r)
-	max_oct = high*(math.pow(2,8-r)+1)-1
+	high = octet/int(math.pow(2,8-r))
+	min_oct = high*int(math.pow(2,8-r))
+	max_oct = (high+1)*int(math.pow(2,8-r))-1
 	return min_oct, max_oct
 
 class db_helper():
@@ -71,7 +71,7 @@ class db_helper():
 	
 		return json.dumps(result_list)
 	
-	def query_fuzzy_ips(self, ip, prefix, limit):
+	def query_fuzzy_ips(self, ip, prefix, skip, limit):
 		session = self.driver.session()
 		octs = ip.split(".")
 		p = int(prefix) #mask length
@@ -80,10 +80,13 @@ class db_helper():
 			r = p - o*8 #remainder
 			filter_str = ""
 			for i in range(o):
-				filter_str += "octs[%d] = \'%d\' AND " % (i,octs[i])
+				filter_str += "octs[%d] = \'%s\' AND " % (i,octs[i])
 
-			min_oct, max_oct = remainder_range(octs[i],r)
-			filter_str += "octs[%d] > \'%d\' AND octs[%d] < \'%d\'" % (i,min_oct,i,max_oct)
+			if r != 0:
+				min_oct, max_oct = remainder_range(int(octs[i+1]),r)
+				filter_str += "octs[%d] >= \'%d\' AND octs[%d] <= \'%d\'" % (i+1,min_oct,i+1,max_oct)
+			else:
+				filter_str = filter_str.strip(" AND ")
 
 		elif p == 0:
 			filter_str = ""
@@ -92,7 +95,6 @@ class db_helper():
 			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
 		else:
 			sys.stderr.write( "MATCH (n:node) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
-		'''
 		try:
 			if filter_str != "":
 				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
@@ -109,8 +111,6 @@ class db_helper():
 			result_list.append(record["n"].properties)
 	
 		return json.dumps(result_list)
-		'''
-		return ""
 		
 	def query_ip_neighbours(self, ip):
 		if not is_ip_ligit(ip):
@@ -226,7 +226,7 @@ class db_helper():
 			count = record["count"]
 		return count
 
-	def query_fuzzy_count(self, ip, prefix, limit):
+	def query_fuzzy_count(self, ip, prefix):
 		session = self.driver.session()
 		octs = ip.split(".")
 		p = int(prefix) #mask length
@@ -235,37 +235,38 @@ class db_helper():
 			r = p - o*8 #remainder
 			filter_str = ""
 			for i in range(o):
-				filter_str += "octs[%d] = \'%d\' AND " % (i,octs[i])
+				filter_str += "octs[%d] = \'%s\' AND " % (i,octs[i])
 
-			min_oct, max_oct = remainder_range(octs[i],r)
-			filter_str += "octs[%d] > \'%d\' AND octs[%d] < \'%d\'" % (i,min_oct,i,max_oct)
+			if r != 0:
+				min_oct, max_oct = remainder_range(int(octs[i+1]),r)
+				filter_str += "octs[%d] >= \'%d\' AND octs[%d] <= \'%d\'" % (i+1,min_oct,i+1,max_oct)
+			else:
+				filter_str = filter_str.strip(" AND ")
 
 		elif p == 0:
 			filter_str = ""
 
 		if filter_str != "":
-			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n)\n" % (filter_str, skip, limit) )
+			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 		else:
-			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n)\n" % (skip, limit) )
-		'''
+			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n) as count\n" % (skip, limit) )
+
 		try:
 			if filter_str != "":
-				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n)\n" % (filter_str, skip, limit) )
+				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 			else:
-				result = session.run( "MATCH (n:node) RETURN COUNT(n)\n" % (skip, limit) )
+				result = session.run( "MATCH (n:node) RETURN COUNT(n) as count\n" % (skip, limit) )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
                         exit(-1)
 		session.close()
 		
-		result_list = []
+		count = 0
 		for record in result:
-			result_list.append(record["n"].properties)
-	
-		return json.dumps(result_list)
-		'''
-		return ""
+			count = record["count"]
+
+		return count
 
 	def query_router_count(self, ip, asn, country):
 		if ip != "":

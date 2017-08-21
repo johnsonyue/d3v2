@@ -125,7 +125,7 @@ function on_filter(){
 action to query a page.
 */
 function query_page(){
-	var skip = start_page;
+	var skip = active_page*page_size;
 	var limit = page_size;
 	//construct url
 	var url = base_url + "filter";

@@ -179,7 +179,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 				prefix = post["prefix"].value
 		
 			helper = db.db_helper()
-			result = helper.query_fuzzy_ips(ip, prefix)
+			result = helper.query_fuzzy_ips(ip, prefix, skip, limit)
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(result)
