@@ -249,13 +249,13 @@ class db_helper():
 		if filter_str != "":
 			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 		else:
-			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n) as count\n" % (skip, limit) )
+			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n) as count\n" )
 
 		try:
 			if filter_str != "":
 				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n) as count\n" % (filter_str) )
 			else:
-				result = session.run( "MATCH (n:node) RETURN COUNT(n) as count\n" % (skip, limit) )
+				result = session.run( "MATCH (n:node) RETURN COUNT(n) as count\n" )
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
                         session.close()
