@@ -70,18 +70,18 @@
             <div class="col-md-10"><h1 class="page-header">Router</h1><label id="source_label">Select year month</label></div>
             <div class="col-md-10">
             <div class="form-group form-inline">
-		<div class="input-group date" id="yearmonthpicker">
-                    <input type="text" class="form-control" id="date_text" placeholder="YYYYMM">
-                    <span class="input-group-addon">
-                        <span class="glyphicon glyphicon-calendar"></span>
-                    </span>
-		</div>
                 <select id="source_select" class="form-control">
                     <option>CAIDA</option>
                     <option>iPlane</option>
                     <option>looking glass</option>
                     <option>HITNISL</option>
                 </select>
+		<div class="input-group date" id="yearmonthpicker">
+                    <input type="text" class="form-control" id="date_text" placeholder="YYYYMM">
+                    <span class="input-group-addon">
+                        <span class="glyphicon glyphicon-calendar"></span>
+                    </span>
+		</div>
                 <button type="submit" class="form-control" id="query_btn">set</button>
             </div>
             </div>

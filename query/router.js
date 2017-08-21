@@ -2,7 +2,7 @@
 configurable variables
 global state variables
 */
-var base_url = "http://10.10.11.210:9967/";
+var base_url = "http://10.10.222.135:9966/";
 var num_page = -1;
 var page_size = 50;
 var page_disp = 15;

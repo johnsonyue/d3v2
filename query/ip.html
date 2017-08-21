@@ -72,6 +72,8 @@
             <div class="col-md-10">
                 <div class="form-inline form-group">
                     <input id="ip_text" type="text" class="form-control" placeholder="IP address">
+                    /
+                    <input id="prefix_text" type="number" value="31" min="0" max="32" class="form-control">
                     <button type="submit" class="form-control" id="filter_btn">filter</button>
 
                     <button type="submit" class="form-control pull-right" id="go_btn">go</button>
@@ -88,7 +90,6 @@
                     <th><a style=cursor:pointer>ASN<span class="glyphicon glyphicon-menu-down"></span></a></th>
                     <th>neighbours</th>
                     <th>topology</th>
-                    <th>monitors</th>
                     </thead>
                     <tbody>
                     <tr>
@@ -96,7 +97,6 @@
                         <td><span class="flag-icon flag-icon-cn"></span>&nbsp CN</td>
                         <td>202.118.236.229</td>
                         <td>4538</td>
-                        <td><a style=cursor:pointer>details</a></td>
                         <td><a style=cursor:pointer>details</a></td>
                         <td><a style=cursor:pointer>details</a></td>
                     </tr>

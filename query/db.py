@@ -1,4 +1,5 @@
 from neo4j.v1 import GraphDatabase, basic_auth
+import math
 import json
 import sys
 
@@ -14,6 +15,16 @@ def is_ip_ligit(ip):
 		if(int(d)!=0 and d[0]=='0'): #has extra 0 pad
 			return False
 	return True
+
+#say octet = 138, r = 5
+#138  =  10001010b
+#output: 10001000b, 
+#        10001111b
+def remainder_range(octet, r):
+	high = octet/math.pow(2,8-r)
+	min_oct = high*math.pow(2,8-r)
+	max_oct = high*(math.pow(2,8-r)+1)-1
+	return min_oct, max_oct
 
 class db_helper():
 	def __init__(self):
@@ -59,6 +70,47 @@ class db_helper():
 			result_list.append(record["n"].properties)
 	
 		return json.dumps(result_list)
+	
+	def query_fuzzy_ips(self, ip, prefix, limit):
+		session = self.driver.session()
+		octs = ip.split(".")
+		p = int(prefix) #mask length
+		if p > 0 and p <= 32:
+			o = p/8 #number of octs
+			r = p - o*8 #remainder
+			filter_str = ""
+			for i in range(o):
+				filter_str += "octs[%d] = \'%d\' AND " % (i,octs[i])
+
+			min_oct, max_oct = remainder_range(octs[i],r)
+			filter_str += "octs[%d] > \'%d\' AND octs[%d] < \'%d\'" % (i,min_oct,i,max_oct)
+
+		elif p == 0:
+			filter_str = ""
+
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+		else:
+			sys.stderr.write( "MATCH (n:node) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+		'''
+		try:
+			if filter_str != "":
+				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN n SKIP %s LIMIT %s\n" % (filter_str, skip, limit) )
+			else:
+				result = session.run( "MATCH (n:node) RETURN n SKIP %s LIMIT %s\n" % (skip, limit) )
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		result_list = []
+		for record in result:
+			result_list.append(record["n"].properties)
+	
+		return json.dumps(result_list)
+		'''
+		return ""
 		
 	def query_ip_neighbours(self, ip):
 		if not is_ip_ligit(ip):
@@ -173,6 +225,47 @@ class db_helper():
 		for record in result:
 			count = record["count"]
 		return count
+
+	def query_fuzzy_count(self, ip, prefix, limit):
+		session = self.driver.session()
+		octs = ip.split(".")
+		p = int(prefix) #mask length
+		if p > 0 and p <= 32:
+			o = p/8 #number of octs
+			r = p - o*8 #remainder
+			filter_str = ""
+			for i in range(o):
+				filter_str += "octs[%d] = \'%d\' AND " % (i,octs[i])
+
+			min_oct, max_oct = remainder_range(octs[i],r)
+			filter_str += "octs[%d] > \'%d\' AND octs[%d] < \'%d\'" % (i,min_oct,i,max_oct)
+
+		elif p == 0:
+			filter_str = ""
+
+		if filter_str != "":
+			sys.stderr.write( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n)\n" % (filter_str, skip, limit) )
+		else:
+			sys.stderr.write( "MATCH (n:node) RETURN COUNT(n)\n" % (skip, limit) )
+		'''
+		try:
+			if filter_str != "":
+				result = session.run( "MATCH (n:node) WITH n,SPLIT(n.ip,\".\") AS octs WHERE %s RETURN COUNT(n)\n" % (filter_str, skip, limit) )
+			else:
+				result = session.run( "MATCH (n:node) RETURN COUNT(n)\n" % (skip, limit) )
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		result_list = []
+		for record in result:
+			result_list.append(record["n"].properties)
+	
+		return json.dumps(result_list)
+		'''
+		return ""
 
 	def query_router_count(self, ip, asn, country):
 		if ip != "":

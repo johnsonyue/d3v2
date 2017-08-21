@@ -34,14 +34,25 @@ Description:
 var num_node = -1;
 
 function init_num_node(){
-	var url = base_url + "count";
+	var url = base_url + "fuzzy_count";
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
+	var prefix_text = d3.select("#prefix_text").node().value;
 	
 	var params = {};
 	if(ip_text != ""){
 		params["ip"] = ip_text;
 	}
+	var reg = new RegExp("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+	if (!reg.test(ip_text)){
+		alert("invalid ip address");
+	}
+	var reg = new RegExp("-*\\d+");
+	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
+		alert("invalid prefix");
+		return;
+	}
+	params["prefix"] = prefix_text;
 	
 	var post_str = $.param(params);
 
@@ -95,18 +106,31 @@ function query_page(){
 	var skip = start_page;
 	var limit = page_size;
 	//construct url
-	var url = base_url + "filter";
+	var url = base_url + "fuzzy_filter";
 	
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
-	
+	var prefix_text = d3.select("#prefix_text").node().value;
+
 	var params = {
 		"skip":skip,
 		"limit":limit
 	}
+
 	if(ip_text != ""){
 		params["ip"] = ip_text;
 	}
+
+	var reg = new RegExp("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+	if (!reg.test(ip_text)){
+		alert("invalid ip address");
+	}
+	var reg = new RegExp("-*\\d+");
+	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
+		alert("invalid prefix");
+		return;
+	}
+	params["prefix"] = prefix_text;
 	
 	var post_str = $.param(params);
 
@@ -161,8 +185,6 @@ function refresh_table(){
 		   .append('<td><a style=cursor:pointer onclick=neighbours_click(' + i.toString() + ')>' + "detail" + '</a></td>');
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td><a style=cursor:pointer onclick=topology_click(' + i.toString() + ')>' + "detail" + '</a></td>');
-		row.find("tr:eq(" + i.toString() + ")")
-		   .append('<td><a style=cursor:pointer onclick=monitors_click(' + i.toString() + ')>' + "detail" + '</a></td>');
 	}
 }
 
@@ -207,10 +229,6 @@ function on_neighbours_ready(){
 		d3.select("#loader-1").style("display","none");
 		$('#neighbour_modal').modal();
 	}
-}
-
-function monitors_click(i){
-	return;
 }
 
 /*
