@@ -70,10 +70,17 @@
                 <label>fill in filtering condition, hit filter to trigger query.</label>
             </div>
             <div class="col-md-10">
-                <div class="form-inline form-group">
-                    <input id="ip_text" type="text" class="form-control" placeholder="IP address">
+                <div id="prefix_form" class="form-inline form-group" style="display: none;">
+                    <input type="text" class="form-control" placeholder="IP address">
                     /
-                    <input id="prefix_text" type="number" value="31" min="0" max="32" class="form-control">
+                    <input type="number" value="31" min="0" max="32" class="form-control">
+                    <button type="submit" class="form-control">filter</button>
+
+                    <button type="submit" class="form-control pull-right">go</button>
+                    <input type="text" class="form-control pull-right" placeholder="page">
+                </div>
+                <div id="proximity_form" class="form-inline form-group">
+                    <input id="ip_text" type="text" class="form-control" placeholder="IP address">
                     <button type="submit" class="form-control" id="filter_btn">filter</button>
 
                     <button type="submit" class="form-control pull-right" id="go_btn">go</button>

@@ -5,6 +5,7 @@ import BaseHTTPServer
 import cgi
 
 import db
+import sql
 class Server(BaseHTTPServer.HTTPServer):
 	def __init__(self, (HOST_NAME, PORT_NUMBER), handler, config):
 		BaseHTTPServer.HTTPServer.__init__(self, (HOST_NAME, PORT_NUMBER), handler)
@@ -38,7 +39,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			
 	def do_POST(self):
 		action = self.path.replace('/','')
-		valid_action = ["neighbour", "filter", "count", "topo", "router_count", "router_filter", "router_neighbour", "router_topo", "fuzzy_count", "fuzzy_filter"]
+		valid_action = ["neighbour", "filter", "count", "topo", "router_count", "router_filter", "router_neighbour", "router_topo", "fuzzy_count", "fuzzy_filter", "proximity_count", "proximity_filter"]
 		if ( action not in valid_action ):
 			self.wfile.write("Invalid Action: %s" % action)
 			return
@@ -180,6 +181,26 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		
 			helper = db.db_helper()
 			result = helper.query_fuzzy_ips(ip, prefix, skip, limit)
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)
+		elif ( action == "proximity_count" ):
+			ip = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
+			helper = sql.db_helper()
+			result = helper.get_closest_ip_count(ip)
+			self.send_response(200)
+			self.end_headers()
+			self.wfile.write(result)
+		elif ( action == "proximity_filter" ):
+			ip = ""
+			if post.has_key("ip"):
+				ip = post["ip"].value
+			helper = sql.db_helper()
+			ip_list = helper.get_closest_ip(ip)
+			neo_helper = db.db_helper()
+			result = neo_helper.query_ip_list(ip_list)
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(result)

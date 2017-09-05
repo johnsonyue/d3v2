@@ -34,10 +34,9 @@ Description:
 var num_node = -1;
 
 function init_num_node(){
-	var url = base_url + "fuzzy_count";
+	var url = base_url + "proximity_count";
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
-	var prefix_text = d3.select("#prefix_text").node().value;
 	
 	var params = {};
 	if(ip_text != ""){
@@ -49,11 +48,6 @@ function init_num_node(){
 		return;
 	}
 	var reg = new RegExp("-*\\d+");
-	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
-		alert("invalid prefix");
-		return;
-	}
-	params["prefix"] = prefix_text;
 	
 	var post_str = $.param(params);
 
@@ -107,11 +101,10 @@ function query_page(){
 	var skip = active_page*page_size;
 	var limit = page_size;
 	//construct url
-	var url = base_url + "fuzzy_filter";
+	var url = base_url + "proximity_filter";
 	
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
-	var prefix_text = d3.select("#prefix_text").node().value;
 
 	var params = {
 		"skip":skip,
@@ -128,11 +121,6 @@ function query_page(){
 		return;
 	}
 	var reg = new RegExp("-*\\d+");
-	if (!reg.test(prefix_text) || parseInt(prefix_text) > 32){
-		alert("invalid prefix");
-		return;
-	}
-	params["prefix"] = prefix_text;
 	
 	var post_str = $.param(params);
 

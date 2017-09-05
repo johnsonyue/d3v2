@@ -1,13 +1,19 @@
 {
 	"app":{
-		"host_name":"172.17.0.4",
+		"host_name":"172.17.0.3",
 		"port_number":8080,
 		"root_dir":"/home/d3/"
 	},
 	"db":{
 		"address":"10.10.222.135",
-		"port":"7686",
+		"port":"7689",
 		"username":"neo4j",
 		"password":"1q2w3e4r"
-	}
+	},
+	"mysql":{
+                "host":"172.17.0.2",
+                "database":"nodes",
+                "user":"john",
+                "password":"password"
+        }
 }

@@ -112,16 +112,40 @@ class db_helper():
 	
 		return json.dumps(result_list)
 		
+	def query_ip_list(self, ip_list):
+		session = self.driver.session()
+		if len(ip_list) == 0:
+			return "[]"
+
+		filter_str = ""
+		for ip in ip_list:
+			filter_str += "n.ip = \'%s\' OR " % (ip)
+		filter_str = filter_str.strip(" OR ")
+			
+		sys.stderr.write( "MATCH (n:node) WHERE %s RETURN n\n" % (filter_str) )
+		try:
+			result = session.run( "MATCH (n:node) WHERE %s RETURN n\n" % (filter_str) )
+		except Exception, ex:
+                        sys.stderr.write("\n" + str(ex) + "\n")
+                        session.close()
+                        exit(-1)
+		session.close()
+		
+		result_list = []
+		for record in result:
+			result_list.append(record["n"].properties)
+	
+		return json.dumps(result_list)
 	def query_ip_neighbours(self, ip):
 		if not is_ip_ligit(ip):
 			return None
 
 		session = self.driver.session()
 		#sys.stderr.write("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
-		sys.stderr.write("MATCH (in)-[edge:edge]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip RETURN in,out,edge\n" % (ip))
+		sys.stderr.write("MATCH (in:node)-[edge:edge]-(out:node) WHERE in.ip = \'%s\' RETURN in,out,edge\n" % (ip))
 		try:
 			#result = session.run("MATCH (in)-[edge:edge]->(out) WHERE in.ip = \'%s\' OR out.ip = \'%s\' RETURN in,out,edge\n" % (ip,ip))
-			result = session.run("MATCH (in)-[edge:edge]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip RETURN in,out,edge\n" % (ip))
+			result = session.run("MATCH (in:node)-[edge:edge]-(out:node) WHERE in.ip = \'%s\' RETURN in,out,edge\n" % (ip))
 			session.close()
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
@@ -143,10 +167,10 @@ class db_helper():
 
 		session = self.driver.session()
 		#sys.stderr.write("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type})\n" % (ip))
-		sys.stderr.write("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type,in:startNode(e),out:endNode(e)} AS edge limit 5001\n" % (depth,ip))
+		sys.stderr.write("MATCH p=(in:node)-[edge:edge*1..%d]-(out:node) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e).ip,target:endNode(e).ip,delay:e.delay,type:e.type,in:startNode(e),out:endNode(e)} AS edge limit 5001\n" % (depth,ip))
 		try:
 			#result = session.run("MATCH p=(in)-[edge:edge*1..3]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN COLLECT({source:startNode(e),target:endNode(e),delay:e.delay,type:e.type}) AS edge\n" % (ip))
-			result = session.run("MATCH p=(in)-[edge:edge*1..%d]-(out) WHERE in.ip = \'%s\' AND NOT in.ip = out.ip UNWIND edge AS e RETURN {source:startNode(e),target:endNode(e),delay:e.delay,type:e.type,in:startNode(e), out:endNode(e)} AS edge limit 5001" % (depth,ip))
+			result = session.run("MATCH p=(in:node)-[edge:edge*1..%d]-(out:node) WHERE in.ip = \'%s\' UNWIND edge AS e RETURN {source:startNode(e),target:endNode(e),delay:e.delay,type:e.type,in:startNode(e), out:endNode(e)} AS edge limit 5001" % (depth,ip))
 			session.close()
 		except Exception, ex:
                         sys.stderr.write("\n" + str(ex) + "\n")
