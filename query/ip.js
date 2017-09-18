@@ -105,6 +105,11 @@ function query_page(){
 	
 	//construct post string.
 	var ip_text = d3.select("#ip_text").node().value;
+	var reg = new RegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
+	if (!reg.test(ip_text)){
+		alert("invalid ip address");
+		return;
+	}
 
 	var params = {
 		"skip":skip,
@@ -115,11 +120,6 @@ function query_page(){
 		params["ip"] = ip_text;
 	}
 
-	var reg = new RegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-	if (!reg.test(ip_text)){
-		alert("invalid ip address");
-		return;
-	}
 	var reg = new RegExp("-*\\d+");
 	
 	var post_str = $.param(params);
@@ -166,9 +166,9 @@ function refresh_table(){
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append("<td>" + (active_page*page_size+i).toString() + "</td>");
 		row.find("tr:eq(" + i.toString() + ")")
-		   .append('<td><span class="flag-icon flag-icon-' + cc + '"></span>&nbsp; ' + cc.toUpperCase() + '</td>');
-		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td>' + ip_list[i].ip + '</td>');
+		row.find("tr:eq(" + i.toString() + ")")
+		   .append('<td><span class="flag-icon flag-icon-' + cc + '"></span>&nbsp; ' + cc.toUpperCase() + '</td>');
 		row.find("tr:eq(" + i.toString() + ")")
 		   .append('<td>' + ip_list[i].asn + '</td>');
 		row.find("tr:eq(" + i.toString() + ")")
@@ -213,8 +213,12 @@ function on_neighbours_ready(){
 			row.find("tr:eq("+ i.toString()+")").append('<td>'+ (i).toString()+'</td>');
 			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].in.ip + '</td>');
 			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].out.ip + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.is_dest + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.star + '</td>');
 			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.delay + '</td>');
-			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.type + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.freq + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.ttl + '</td>');
+			row.find("tr:eq("+ i.toString()+")").append('<td>' + nbr_list[i].edge.monitor + '</td>');
 		}
 		d3.select("#loader-1").style("display","none");
 		$('#neighbour_modal').modal();
@@ -518,7 +522,7 @@ d3.select("#svg_div")
 /*
 on node click.
 */
-function on_node_click(d){ if (expand_keydown){
+function on_node_click(d){if (expand_keydown){
 	var ind = d3.select(this).attr("id"); //here index means the identifier used by force layout.
 	var i = get_index(ind); //note here index of the DOM means order in nodes array
 	if (degree_dict[ind] != 1 && nodes[i]["child"].length == 0){ //shrink

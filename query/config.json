@@ -2,7 +2,7 @@
 	"app":{
 		"host_name":"172.17.0.3",
 		"port_number":8080,
-		"root_dir":"/home/d3/"
+		"root_dir":"/home/d3v2/"
 	},
 	"db":{
 		"address":"10.10.222.135",

@@ -59,7 +59,6 @@
             </ul>
             <ul class="nav nav-sidebar">
                 <li class="active"><a>ip</a></li>
-                <li><a href="query.html">query</a></li>
                 <li><a href="router.html">router</a></li>
             </ul>
         </div>
@@ -92,8 +91,8 @@
                 <table class="table table-bordered table-hover col-md-10" id="filter_table">
                     <thead>
                     <th>#</th>
-                    <th>icon</th>
                     <th><a style=cursor:pointer>IP<span class="glyphicon glyphicon-menu-down"></span></a></th>
+                    <th>icon</th>
                     <th><a style=cursor:pointer>ASN<span class="glyphicon glyphicon-menu-down"></span></a></th>
                     <th>neighbours</th>
                     <th>topology</th>
@@ -101,8 +100,8 @@
                     <tbody>
                     <tr>
                         <td>0</td>
-                        <td><span class="flag-icon flag-icon-cn"></span>&nbsp CN</td>
                         <td>202.118.236.229</td>
+                        <td><span class="flag-icon flag-icon-cn"></span>&nbsp CN</td>
                         <td>4538</td>
                         <td><a style=cursor:pointer>details</a></td>
                         <td><a style=cursor:pointer>details</a></td>
@@ -150,19 +149,26 @@
                 <table class="table table-bordered" id="neighbour_table">
                     <thead>
                     <th>#</th>
-                    <th>ingress</th>
-                    <th>outgress</th>
+                    <th>in</th>
+                    <th>out</th>
+                    <th>is_dest</th>
+                    <th>star</th>
                     <th>delay</th>
-                    <th>type</th>
+                    <th>freq</th>
+                    <th>ttl</th>
+                    <th>monitor</th>
                     </thead>
                     <tbody>
                     <tr>
                         <td>0</td>
-                        <td><span class="flag-icon flag-icon-cn"></span></td>
                         <td>202.118.236.229</td>
                         <td>202.118.236.254</td>
+                        <td>N</td>
+                        <td>0</td>
                         <td>0.1</td>
-                        <td>D</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td>202.118.236.223</td>
                     </tr>
                     </tbody>
                 </table>
