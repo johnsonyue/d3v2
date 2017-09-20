@@ -2,6 +2,8 @@ import os
 import time
 import json
 import BaseHTTPServer
+from SocketServer import ThreadingMixIn
+
 import cgi
 
 import db
@@ -13,6 +15,10 @@ class Server(BaseHTTPServer.HTTPServer):
 		self.config = config
 		self.geo_helper = geoip.geoip_helper()
 		bgp = self.geo_helper.query_asn_from_bgp("114.114.114.114")
+
+class ThreadedHTTPServer(ThreadingMixIn, Server):
+	def __init__(self, (HOST_NAME, PORT_NUMBER), handler, config):
+		Server.__init__(self, (HOST_NAME, PORT_NUMBER), handler, config)
 	
 class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_HEAD(self):
@@ -21,9 +27,96 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.end_headers()
 	def do_GET(self):
 		config = json.loads(open("config.json").read())
-		file_path = self.path.lstrip('/')
-		file_path = config["app"]["root_dir"] + "/" + file_path
-		if os.path.exists(file_path):
+		url_path = self.path.lstrip('/')
+		file_path = config["app"]["root_dir"] + "/" + url_path
+		if url_path.split('?')[0] == "json":
+			get = {}
+			for x in file_path.split('?')[1].split('&'):
+				get[x.split('=')[0]] = x.split('=')[1]
+			if not get.has_key("action"):
+				self.send_response(505)
+				self.end_headers()
+				self.wfile.write("No Action")
+				return
+			action = get["action"]
+			valid_action = ["neighbour", "topo", "proximity_count", "proximity_filter"]
+			if ( action not in valid_action ):
+				self.send_response(505)
+				self.end_headers()
+				self.wfile.write("Invalid Action: %s" % action)
+				return
+
+			skip = 0
+			if get.has_key("skip"):
+				skip = int(get["skip"])
+			limit = 100
+			if get.has_key("limit"):
+				limit = int(get["limit"])
+
+			if ( action == "neighbour" ):
+				if get.has_key("ip"):
+					ip = get["ip"]
+					helper = db.db_helper()
+					result = helper.query_ip_neighbours(ip)
+					self.send_response(200)
+					self.end_headers()
+					self.wfile.write(result)
+			elif ( action == "topo" ):
+				if get.has_key("ip"):
+					ip = get["ip"]
+					helper = db.db_helper()
+					result_list = json.loads(helper.query_ip_topo(ip))
+
+					geo_helper = self.server.geo_helper
+					for i in range(len(result_list)):
+						record = result_list[i]
+						ingress = record["source"]
+						bgp = geo_helper.query_asn_from_bgp(ingress)
+						geo = geo_helper.query(ingress)
+						temp_dict = {}
+						temp_dict["ip"] = ingress
+						temp_dict["asn"] = bgp["asn"]
+						temp_dict["country"] = geo["mmdb"]["country"]
+						result_list[i]["in"] = temp_dict
+
+						outgress = record["target"]
+						bgp = geo_helper.query_asn_from_bgp(outgress)
+						geo = geo_helper.query(outgress)
+						temp_dict = {}
+						temp_dict["ip"] = outgress
+						temp_dict["asn"] = bgp["asn"]
+						temp_dict["country"] = geo["mmdb"]["country"]
+						result_list[i]["out"] = temp_dict
+
+					result = json.dumps(result_list)
+					
+					self.send_response(200)
+					self.end_headers()
+					self.wfile.write(result)
+			elif ( action == "proximity_filter" ):
+				ip = ""
+				if get.has_key("ip"):
+					ip = get["ip"]
+				helper = sql.db_helper()
+				ip_list = helper.get_closest_ip(ip)
+
+				geo_helper = self.server.geo_helper
+				result_list = []
+				for ip in ip_list:
+					temp_dict = {}
+					bgp = geo_helper.query_asn_from_bgp(ip)
+					geo = geo_helper.query(ip)
+					temp_dict["ip"] = ip
+					temp_dict["asn"] = bgp["asn"]
+					temp_dict["country"] = geo["mmdb"]["country"]
+					result_list.append(temp_dict)
+				result = json.dumps(result_list)
+
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write(result)
+
+		elif os.path.exists(file_path):
 			self.send_response(200)
 			suffix = file_path.split('.')[-1]
 			if suffix == "css":
@@ -44,6 +137,8 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		action = self.path.replace('/','')
 		valid_action = ["neighbour", "topo", "proximity_count", "proximity_filter"]
 		if ( action not in valid_action ):
+			self.send_response(505)
+			self.end_headers()
 			self.wfile.write("Invalid Action: %s" % action)
 			return
 		
